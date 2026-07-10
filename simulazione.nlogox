@@ -31,6 +31,8 @@ turtles-own [
   trait-E     ;; Extraversion (0.0 - 1.0)
   trait-A     ;; Agreeableness (0.0 - 1.0)
   trait-N     ;; Neuroticism (0.0 - 1.0)
+  
+  amico-seguito   ;; Formazione di Legami e "Flocking" Sociale
 ]
 
 ; -----------------------------------------------------
@@ -163,6 +165,7 @@ to setup
     set size 3
     set timer-attesa 0
     set drink-consumati 0
+    set amico-seguito nobody
     
     set is-ocean? false ;; Agente standard
     
@@ -177,6 +180,7 @@ to setup
     set size 3
     set timer-attesa 0
     set drink-consumati 0
+    set amico-seguito nobody
     
     set is-ocean? true ;; Agente intelligente
     
@@ -248,8 +252,23 @@ to go
     ; 2. MOVIMENTO, INCONTRI E CODE
     ; -----------------------------------------------------
     
+    ; --- NOVITÀ: LOGICA DEL FOLLOWER (FLOCKING) ---
+    if amico-seguito != nobody [
+      
+      ; Se sono a più di 1.2 passi dal mio leader, faccio un passo verso di lui
+      if distance amico-seguito > 1.2 [
+        face amico-seguito
+        let prossima-patch patch-ahead 1
+        if prossima-patch != nobody and [walkable?] of prossima-patch = true and not any? turtles-on prossima-patch [
+          move-to prossima-patch
+        ]
+      ]
+      set label "in gruppo"
+      set label-color black
+    ]
+    
     ; Esploratori e Cercatori di amici si muovono per il locale
-    if stato = "esplora" or stato = "cerca-amico" [
+    if (stato = "esplora" or stato = "cerca-amico") and amico-seguito = nobody [
       right random 60 - 30
       let prossima-patch patch-ahead 1
       ifelse prossima-patch != nobody 
@@ -384,7 +403,39 @@ to go
             print (word "Agente " [who] of amico " (Intelligente): " msg2)
           ]
           
+          ; -----------------------------------------------------
+          ; FASE 4: FORMAZIONE DEL GRUPPO
+          ; -----------------------------------------------------
+          ; Calcoliamo l'affinità (aggiungiamo una base random per imprevedibilità)
+          let affinita random 50
+          if iniziatore-ocean? = true [ set affinita affinita + (trait-E * 30) + (trait-A * 20) ]
+          if amico-ocean? = true [ set affinita affinita + ([trait-E] of amico * 30) + ([trait-A] of amico * 20) ]
+          
+          ; Se l'affinità è molto alta (> 75), formano un gruppo
+          if affinita > 75 [
+            ; Creiamo un legame visivo in NetLogo (una linea gialla che li unisce)
+            create-link-with amico [ set color yellow set thickness 0.2 ]
+            
+            ; L'amico si sottomette e diventa il follower dell'iniziatore
+            ask amico [ set amico-seguito myself ]
+            
+            if iniziatore-ocean? = true [
+              print "-> I due agenti hanno fatto amicizia e ora si muoveranno in gruppo!"
+              
+              ; Facciamo riflettere l'agente OCEAN su questo nuovo legame per salvarlo in memoria
+              py:set "memoria_py" memoria
+              py:set "profilo_py" (word "O:" precision trait-O 1 " C:" precision trait-C 1 " E:" precision trait-E 1 " A:" precision trait-A 1 " N:" precision trait-N 1)
+              let pensiero-gruppo py:runresult "genera_pensiero(profilo_py, memoria_py, 'Ho appena incontrato una persona con cui ho legato, abbiamo formato un gruppo per la serata.')"
+              
+              set memoria (word "Ho fatto amicizia con qualcuno. Pensiero: " pensiero-gruppo)
+            ]
+          ]
+          
           print "----------------------"
+          
+          ; Azzeriamo il timer per permettergli di riprendere a muoversi all'istante
+          set timer-attesa 5
+          ask amico [ set timer-attesa 5 ]
         ]
       ]
     ]
@@ -435,6 +486,9 @@ to go
 end
 
 to scegli-nuovo-obiettivo
+  ; Se sto seguendo qualcuno, il mio libero arbitrio si disattiva!
+  if amico-seguito != nobody [ stop ]
+  
   ifelse is-ocean? = false [
     ;; ----------------------------------------------------
     ;; COMPORTAMENTO STANDARD (190 agenti)
