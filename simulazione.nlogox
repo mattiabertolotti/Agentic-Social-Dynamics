@@ -132,7 +132,7 @@ to setup
     ; --- genera_pensiero ---
     "def genera_pensiero(profilo, ricordi, evento):\n"
     "    url = 'http://localhost:11434/api/generate'\n"
-    "    prompt = f'Sei in un bar. Tratti OCEAN: {profilo}. I tuoi ricordi: {ricordi}. Ora sta succedendo questo: {evento}. Formula un breve pensiero interiore (max 15 parole) coerente con la tua personalità e i tuoi ricordi.'\n"
+    "    prompt = f'Sei un ragazzo/a in un bar. Tratti OCEAN: {profilo}. I tuoi ricordi: {ricordi}. Ora sta succedendo questo: {evento}. Formula un breve pensiero interiore (max 15 parole) coerente con la tua personalità e i tuoi ricordi.'\n"
     "    data = {'model': 'gemma3:4b', 'prompt': prompt, 'stream': False}\n"
     "    req = urllib.request.Request(url, data=json.dumps(data).encode('utf-8'), headers={'Content-Type': 'application/json'})\n"
     "    try:\n"
@@ -145,7 +145,7 @@ to setup
     ; --- chiedi_a_ollama ---
     "def chiedi_a_ollama(profilo, contesto):\n"
     "    url = 'http://localhost:11434/api/generate'\n"
-    "    prompt = f'{contesto} Tieni conto del tuo profilo: {profilo}. Rispondi con una breve frase di saluto parlata (max 10 parole).'\n"
+    "    prompt = f'Sei un ragazzo/a in un bar. Il tuo carattere OCEAN (da 0 a 1) è: {profilo}. {contesto} REGOLE TASSATIVE: 1) Parla in prima persona. 2) Usa un linguaggio giovanile, super informale, molto diretto. 3) È ASSOLUTAMENTE VIETATO usare frasi fatte, scuse, eccessiva cortesia o dire cose come \"che piacere\", \"sono felice\", \"sorriso\". 4) Massimo 12 parole. 5) Vai dritto al punto.'\n"
     "    data = {'model': 'gemma3:4b', 'prompt': prompt, 'stream': False}\n"
     "    req = urllib.request.Request(url, data=json.dumps(data).encode('utf-8'), headers={'Content-Type': 'application/json'})\n"
     "    try:\n"
@@ -268,40 +268,127 @@ to go
         let amico one-of amici
         
         set stato "chiacchiera"
-        set timer-attesa 150 + random 50
+        set timer-attesa 150 + random 50 ; Timer base
         face amico
         
-        ; -----------------------------------------------------
-        ; INTEGRAZIONE OLLAMA: L'agente genera una frase
-        ; -----------------------------------------------------
-        if is-ocean? = true [
-          ; Creiamo una stringa che descrive l'agente a Ollama
-          let mio-profilo (word "Il tuo profilo psicologico (da 0 a 1) è: Estroversione " trait-E ", Nevroticismo " trait-N ", Amicalità " trait-A)
-          let mio-contesto "Hai appena incontrato un amico nel locale. Salutalo in base al tuo profilo psicologico."
-          
-          py:set "profilo_py" mio-profilo
-          py:set "contesto_py" mio-contesto
-          set ultimo-pensiero py:runresult "chiedi_a_ollama(profilo_py, contesto_py)"
-          
-          ; Mostriamo la frase sopra la testa dell'agente
-          set label ultimo-pensiero
-          set label-color black
-          
-          ; Usiamo 'precision' per limitare i decimali a 2
-          print (word "Agente " who " [E:" (precision trait-E 2) " N:" (precision trait-N 2) "]: " ultimo-pensiero)
-        ]
+        ; Memorizziamo i tipi di agenti
+        let iniziatore-ocean? is-ocean?
+        let amico-ocean? [is-ocean?] of amico
         
-        ; Obbligo anche lui a smettere di camminare
+        ; Fermo l'amico
         ask amico [
           set stato "chiacchiera"
           set timer-attesa [timer-attesa] of myself
           face myself
-          if is-ocean? = true [
-            set label "Che piacere vederti!" ; Risposta base (potresti far interrogare Ollama anche a lui!)
+        ]
+        
+        ; --- AVVIAMO IL DIALOGO SOLO SE ALMENO UNO È INTELLIGENTE ---
+        if (iniziatore-ocean? = true) or (amico-ocean? = true) [
+          print "--- INIZIO DIALOGO ---"
+          
+          ; =====================================================
+          ; CASO 1: INTELLIGENTE vs INTELLIGENTE (5-15 battute)
+          ; =====================================================
+          if iniziatore-ocean? = true and amico-ocean? = true [
+            let num-battute 5 + random 11 ; Sceglie un numero tra 5 e 15
+            
+            ; Aumentiamo il timer visivo in base a quanto parlano
+            set timer-attesa (num-battute * 30)
+            ask amico [ set timer-attesa [timer-attesa] of myself ]
+            
+            ; Prepariamo profili e MEMORIE
+            let prof-iniz (word "O:" precision trait-O 1 " C:" precision trait-C 1 " E:" precision trait-E 1 " A:" precision trait-A 1 " N:" precision trait-N 1)
+            let mem-iniz memoria
+            
+            let prof-amico (word "O:" precision [trait-O] of amico 1 " C:" precision [trait-C] of amico 1 " E:" precision [trait-E] of amico 1 " A:" precision [trait-A] of amico 1 " N:" precision [trait-N] of amico 1)
+            let mem-amico [memoria] of amico
+            
+            ; -- Battuta 1 (Iniziatore) --
+            py:set "profilo_py" prof-iniz
+            ; Aggiungiamo la memoria al contesto della prima battuta
+            py:set "contesto_py" (word "Incontri un amico. I tuoi ricordi recenti: " mem-iniz ". Inizia tu a parlare: commenta il tuo ricordo in modo molto colloquiale e buttala lì.")
+            
+            let ultima-frase py:runresult "chiedi_a_ollama(profilo_py, contesto_py)"
+            set label ultima-frase set label-color black
+            print (word "Agente " who " (Intelligente): " ultima-frase)
+            
+            ; -- Ciclo botta e risposta --
+            let contatore 1
+            repeat (num-battute - 1) [
+              set contatore contatore + 1
+              
+              ifelse contatore mod 2 = 0 [
+                ; Turno Pari: tocca all'Amico
+                py:set "profilo_py" prof-amico
+                ; Inseriamo la memoria dell'amico nella sua risposta
+                py:set "contesto_py" (word "Un amico ti ha appena detto: '" ultima-frase "'. I tuoi ricordi recenti: " mem-amico ". Rispondi agganciandoti alla sua frase in modo secco, usando il tuo ricordo come argomento.")
+                
+                set ultima-frase py:runresult "chiedi_a_ollama(profilo_py, contesto_py)"
+                ask amico [ set label ultima-frase set label-color black ]
+                print (word "Agente " [who] of amico " (Intelligente): " ultima-frase)
+              ] [
+                ; Turno Dispari: tocca all'Iniziatore
+                py:set "profilo_py" prof-iniz
+                ; Inseriamo la memoria dell'iniziatore
+                py:set "contesto_py" (word "L'amico ti ha appena detto: '" ultima-frase "'. I tuoi ricordi: " mem-iniz ". Ribatti in modo informale e spontaneo, senza troppi giri di parole.")
+                
+                set ultima-frase py:runresult "chiedi_a_ollama(profilo_py, contesto_py)"
+                set label ultima-frase set label-color black
+                print (word "Agente " who " (Intelligente): " ultima-frase)
+              ]
+            ]
           ]
+          
+          ; =====================================================
+          ; CASO 2: INTELLIGENTE vs STANDARD (3 fasi)
+          ; =====================================================
+          if iniziatore-ocean? = true and amico-ocean? = false [
+            let prof-iniz (word "O:" precision trait-O 1 " C:" precision trait-C 1 " E:" precision trait-E 1 " A:" precision trait-A 1 " N:" precision trait-N 1)
+            
+            ; 1. Iniziatore
+            py:set "profilo_py" prof-iniz
+            py:set "contesto_py" "Hai appena incontrato un amico nel locale. Salutalo in base al tuo profilo."
+            let msg1 py:runresult "chiedi_a_ollama(profilo_py, contesto_py)"
+            set label msg1 set label-color black
+            print (word "Agente " who " (Intelligente): " msg1)
+            
+            ; 2. Amico Standard
+            let risposte-stupide ["Ah sì, figata!" "Io tutto bene, tu?" "Vero, c'è un sacco di gente!" "Dai, ci si becca in giro!"]
+            let msg2 one-of risposte-stupide
+            ask amico [ set label msg2 set label-color black ]
+            print (word "Agente " [who] of amico " (Standard): " msg2)
+            
+            ; 3. Iniziatore chiude
+            py:set "contesto_py" (word "L'amico ti ha appena risposto dicendo: '" msg2 "'. Fagli una breve battuta finale per concludere la chiacchierata.")
+            let msg3 py:runresult "chiedi_a_ollama(profilo_py, contesto_py)"
+            set label msg3
+            print (word "Agente " who " (Intelligente): " msg3)
+          ]
+          
+          ; =====================================================
+          ; CASO 3: STANDARD vs INTELLIGENTE (2 fasi)
+          ; =====================================================
+          if iniziatore-ocean? = false and amico-ocean? = true [
+            ; 1. Iniziatore Standard
+            let risposte-stupide ["Ciao!" "Ehi! Come butta?" "Tutto bene?" "Che ressa stasera!" "Bella serata eh!"]
+            let msg1 one-of risposte-stupide
+            set label msg1 set label-color black
+            print (word "Agente " who " (Standard): " msg1)
+            
+            ; 2. Amico Intelligente
+            let prof-amico (word "O:" precision [trait-O] of amico 1 " C:" precision [trait-C] of amico 1 " E:" precision [trait-E] of amico 1 " A:" precision [trait-A] of amico 1 " N:" precision [trait-N] of amico 1)
+            py:set "profilo_py" prof-amico
+            py:set "contesto_py" (word "Un amico ti ha appena salutato dicendo: '" msg1 "'. Rispondi coerentemente con il tuo profilo.")
+            let msg2 py:runresult "chiedi_a_ollama(profilo_py, contesto_py)"
+            ask amico [ set label msg2 set label-color black ]
+            print (word "Agente " [who] of amico " (Intelligente): " msg2)
+          ]
+          
+          print "----------------------"
         ]
       ]
     ]
+
     
     ; --- IL RESTO DEI MOVIMENTI PER LE CODE ---
     if stato = "verso-cassa" or stato = "verso-giochi" or stato = "verso-drink" or stato = "verso-birra" or stato = "verso-bagno" [
