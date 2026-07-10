@@ -1,12 +1,15 @@
 <?xml version="1.0" encoding="utf-8"?>
 <model version="NetLogo 7.0.3" snapToGrid="true">
-  <code><![CDATA[; -----------------------------------------------------
+  <code><![CDATA[extensions [py]
+
+; -----------------------------------------------------
 ; 1. GLOBALS
 ; -----------------------------------------------------
 patches-own [
   walkable?   ; Booleano (true/false) per i muri, i tavoli e il bancone
   zona        ; Stringa per identificare il tipo di POI (es: "bagno", "cassa")
-  ; Nuove variabili per i "profumi"
+  
+  ; Variabili per i "profumi"
   dist-cassa
   dist-drink
   dist-birra
@@ -15,9 +18,19 @@ patches-own [
 ]
 
 turtles-own [
-  timer-attesa      ; Contatore per i tick da aspettare (es: 30 o 40 tick)
-  stato             ; Stringa: ricorda l'azione corrente (es. "esplora", "verso-cassa", "acquisto-cassa")
-  drink-consumati   ; Conta quanti drink ha bevuto
+  timer-attesa      ; Contatore per i tick da aspettare
+  stato             ; Stringa: ricorda l'azione corrente
+  drink-consumati   ; Conta drink consumati da ognuno
+  ultimo-pensiero
+  memoria
+  
+  ;; --- VARIABILI OCEAN ---
+  is-ocean?   ;; Booleano: true per i 10 agenti speciali, false per gli altri
+  trait-O     ;; Openness (0.0 - 1.0)
+  trait-C     ;; Conscientiousness (0.0 - 1.0)
+  trait-E     ;; Extraversion (0.0 - 1.0)
+  trait-A     ;; Agreeableness (0.0 - 1.0)
+  trait-N     ;; Neuroticism (0.0 - 1.0)
 ]
 
 ; -----------------------------------------------------
@@ -26,7 +39,7 @@ turtles-own [
 to setup
   clear-all  ; Pulisce il mondo da simulazioni precedenti
 
-  ; Importa la mappa e colora i patches. 
+  ; Importa la mappa e colora i patches
   import-pcolors "map.png" 
 
   ; Inizializzazione della mappa
@@ -103,22 +116,83 @@ to setup
       set walkable? false
       set zona "vetro"
     ]
+    
   ]
   
   calcola-percorsi
 
-  ; ESEMPIO SPAWN TURTLES (opzionale)
-  ; Creiamo le turtles solo sulle zone arancioni
-  create-turtles 15 [
+  ; SPAWN TURTLES
+  ;; 1. CREAZIONE DEI XX AGENTI STANDARD
+  create-turtles 20 [
     set color cyan
-    set shape "person" ; Se hai importato le forme personalizzate
+    set shape "person" 
     set size 3
     set timer-attesa 0
     set drink-consumati 0
-    move-to one-of patches with [zona = "entrata-uscita"]
     
+    set is-ocean? false ;; Agente standard
+    
+    move-to one-of patches with [zona = "entrata-uscita"]
     scegli-nuovo-obiettivo
   ]
+
+  ;; 2. CREAZIONE DEI 10 AGENTI OCEAN
+  create-turtles 10 [
+    set color red  ;; Li coloriamo di rosso per riconoscerli
+    set shape "person"
+    set size 3
+    set timer-attesa 0
+    set drink-consumati 0
+    
+    set is-ocean? true ;; Agente intelligente
+    
+    ;; Assegniamo valori psicologici casuali tra 0 e 1
+    ;; (In futuro potrai decidere di creare profili specifici, es. "il festaiolo")
+    set trait-O random-float 1.0
+    set trait-C random-float 1.0
+    set trait-E random-float 1.0
+    set trait-A random-float 1.0
+    set trait-N random-float 1.0
+    
+    set memoria "Sono appena arrivato nel locale."
+
+    move-to one-of patches with [zona = "entrata-uscita"]
+    scegli-nuovo-obiettivo
+  ]
+
+  ; Avvia l'ambiente Python 
+  py:setup py:python 
+
+  ; Definiamo entrambe le funzioni Python: genera_pensiero e chiedi_a_ollama
+  py:run (word
+    "import urllib.request\n"
+    "import json\n"
+    
+    ; --- genera_pensiero ---
+    "def genera_pensiero(profilo, ricordi, evento):\n"
+    "    url = 'http://localhost:11434/api/generate'\n"
+    "    prompt = f'Sei in un bar. Tratti OCEAN: {profilo}. I tuoi ricordi: {ricordi}. Ora sta succedendo questo: {evento}. Formula un breve pensiero interiore (max 15 parole) coerente con la tua personalità e i tuoi ricordi.'\n"
+    "    data = {'model': 'gemma3:4b', 'prompt': prompt, 'stream': False}\n"
+    "    req = urllib.request.Request(url, data=json.dumps(data).encode('utf-8'), headers={'Content-Type': 'application/json'})\n"
+    "    try:\n"
+    "        with urllib.request.urlopen(req) as res:\n"
+    "            return json.loads(res.read().decode('utf-8'))['response'].strip()\n"
+    "    except Exception as e:\n"
+    "        return f'ERRORE: {str(e)}'\n"
+    "\n"
+    
+    ; --- chiedi_a_ollama ---
+    "def chiedi_a_ollama(profilo, contesto):\n"
+    "    url = 'http://localhost:11434/api/generate'\n"
+    "    prompt = f'{contesto} Tieni conto del tuo profilo: {profilo}. Rispondi con una breve frase di saluto parlata (max 10 parole).'\n"
+    "    data = {'model': 'gemma3:4b', 'prompt': prompt, 'stream': False}\n"
+    "    req = urllib.request.Request(url, data=json.dumps(data).encode('utf-8'), headers={'Content-Type': 'application/json'})\n"
+    "    try:\n"
+    "        with urllib.request.urlopen(req) as res:\n"
+    "            return json.loads(res.read().decode('utf-8'))['response'].strip()\n"
+    "    except Exception as e:\n"
+    "        return f'ERRORE: {str(e)}'\n"
+  )
 
   reset-ticks  ; Azzera il contatore del tempo (i "ticks")
 end
@@ -152,7 +226,7 @@ to go
           if drink-consumati = 2 and random 100 < 75 [ set va-in-bagno? true ]
           if drink-consumati >= 3 [ set va-in-bagno? true ]
           
-          ifelse va-in-bagno? [ set stato "verso-bagno" set label stato ] 
+          ifelse va-in-bagno? [ set stato "verso-bagno" set label stato rifletti "Ho bevuto troppo, devo scappare in bagno!" ] 
                               [ scegli-nuovo-obiettivo ]
         ]
         
@@ -193,23 +267,43 @@ to go
       if any? amici [
         let amico one-of amici
         
-        ; Io inizio a chiacchierare e lo guardo
         set stato "chiacchiera"
-        set timer-attesa 50 + random 50
-        set label stato
+        set timer-attesa 150 + random 50
         face amico
         
-        ; Obbligo anche lui a smettere di camminare, guardarmi e chiacchierare con me!
+        ; -----------------------------------------------------
+        ; INTEGRAZIONE OLLAMA: L'agente genera una frase
+        ; -----------------------------------------------------
+        if is-ocean? = true [
+          ; Creiamo una stringa che descrive l'agente a Ollama
+          let mio-profilo (word "Il tuo profilo psicologico (da 0 a 1) è: Estroversione " trait-E ", Nevroticismo " trait-N ", Amicalità " trait-A)
+          let mio-contesto "Hai appena incontrato un amico nel locale. Salutalo in base al tuo profilo psicologico."
+          
+          py:set "profilo_py" mio-profilo
+          py:set "contesto_py" mio-contesto
+          set ultimo-pensiero py:runresult "chiedi_a_ollama(profilo_py, contesto_py)"
+          
+          ; Mostriamo la frase sopra la testa dell'agente
+          set label ultimo-pensiero
+          set label-color black
+          
+          ; Usiamo 'precision' per limitare i decimali a 2
+          print (word "Agente " who " [E:" (precision trait-E 2) " N:" (precision trait-N 2) "]: " ultimo-pensiero)
+        ]
+        
+        ; Obbligo anche lui a smettere di camminare
         ask amico [
           set stato "chiacchiera"
-          set label stato
-          set timer-attesa [timer-attesa] of myself ; Sincronizziamo gli orologi
+          set timer-attesa [timer-attesa] of myself
           face myself
+          if is-ocean? = true [
+            set label "Che piacere vederti!" ; Risposta base (potresti far interrogare Ollama anche a lui!)
+          ]
         ]
       ]
     ]
     
-    ; --- IL RESTO DEI MOVIMENTI PER LE CODE (Non toccato) ---
+    ; --- IL RESTO DEI MOVIMENTI PER LE CODE ---
     if stato = "verso-cassa" or stato = "verso-giochi" or stato = "verso-drink" or stato = "verso-birra" or stato = "verso-bagno" [
       
       muovi-verso-destinazione 
@@ -217,18 +311,21 @@ to go
       if stato = "verso-cassa" and [dist-cassa] of patch-here = 1 [
         if not any? turtles with [stato = "acquisto-cassa"] [
           set stato "acquisto-cassa" set label stato set timer-attesa 15
+          rifletti "Sto ordinando e pagando alla cassa." 
         ]
       ]
       
       if stato = "verso-drink" and [dist-drink] of patch-here = 1 [
         if not any? turtles with [stato = "attesa-drink"] [
           set stato "attesa-drink" set label "attesa" set timer-attesa 40
+          rifletti "Sono al bancone, aspetto che il barista mi prepari il drink."
         ]
       ]
       
       if stato = "verso-birra" and [dist-birra] of patch-here = 1 [
         if not any? turtles with [stato = "attesa-birra"] [
           set stato "attesa-birra" set label "attesa" set timer-attesa 30
+          rifletti "Aspetto il mio turno per farmi spillare la birra."
         ]
       ]
       
@@ -236,11 +333,13 @@ to go
         if not any? turtles with [stato = "bagno"] [
           set stato "bagno" set label stato set timer-attesa 50
           move-to min-one-of (neighbors with [dist-bagno = 0]) [distance myself]
+          rifletti "Finalmente sono in bagno."
         ]
       ]
 
       if stato = "verso-giochi" and [dist-giochi] of patch-here = 1 [
         set stato "gioca" set label stato set timer-attesa 100 + random 100
+        rifletti "Che bello, inizio a giocare!"
       ]
     ]
   ]
@@ -249,30 +348,60 @@ to go
 end
 
 to scegli-nuovo-obiettivo
-  let decisione random 100
-  
-  if decisione < 30 [
-    set stato "verso-cassa"
-    set timer-attesa 0
+  ifelse is-ocean? = false [
+    ;; ----------------------------------------------------
+    ;; COMPORTAMENTO STANDARD (190 agenti)
+    ;; ----------------------------------------------------
+    let decisione random 100
+    if decisione < 30 [ set stato "verso-cassa" set timer-attesa 0 ]
+    if decisione >= 30 and decisione < 60 [ set stato "verso-giochi" set timer-attesa 0 ]
+    if decisione >= 60 and decisione < 80 [ set stato "cerca-amico" set timer-attesa 100 + random 150 ]
+    if decisione >= 80 [ set stato "esplora" set timer-attesa 100 + random 150 ]
+    
+  ] [
+    ;; ----------------------------------------------------
+    ;; COMPORTAMENTO OCEAN (10 agenti)
+    ;; ----------------------------------------------------
+    ;; Calcoliamo il desiderio (peso) per ogni azione. Più è alto, più è probabile sceglierla.
+    
+    let peso-cassa 20 + (trait-N * 20) + (trait-C * 10)
+    let peso-giochi 10 + (trait-O * 30) + (trait-E * 10)
+    let peso-cerca-amico 10 + (trait-E * 50) + (trait-A * 10)
+    
+    ;; Il nevroticismo abbassa la voglia di esplorare senza meta
+    let peso-esplora 10 + (trait-O * 40) - (trait-N * 20)
+    if peso-esplora < 5 [ set peso-esplora 5 ] ;; Evitiamo pesi negativi
+    
+    ;; Sommiamo tutti i pesi
+    let totale-pesi (peso-cassa + peso-giochi + peso-cerca-amico + peso-esplora)
+    
+    ;; Estraiamo un numero a caso sul totale (Roulette Wheel Selection)
+    let dado random-float totale-pesi
+    
+    ;; Decidiamo l'obiettivo in base all'estrazione
+    if dado < peso-cassa [
+      set stato "verso-cassa" 
+      set timer-attesa 0
+      rifletti "Voglio andare alla cassa per prendere da bere." 
+    ]
+    if dado >= peso-cassa and dado < (peso-cassa + peso-giochi) [
+      set stato "verso-giochi" 
+      set timer-attesa 0
+      rifletti "Mi è venuta voglia di giocare e divertirmi." 
+    ]
+    if dado >= (peso-cassa + peso-giochi) and dado < (peso-cassa + peso-giochi + peso-cerca-amico) [
+      set stato "cerca-amico" 
+      set timer-attesa 100 + random (150 + (trait-E * 100)) 
+      rifletti "Ho voglia di socializzare, cerco qualche amico." 
+    ]
+    if dado >= (peso-cassa + peso-giochi + peso-cerca-amico) [
+      set stato "esplora" 
+      set timer-attesa 100 + random 150
+      rifletti "Faccio un giro per esplorare il locale." 
+    ]
   ]
   
-  if decisione >= 30 and decisione < 60 [
-    set stato "verso-giochi"
-    set timer-attesa 0
-  ]
-  
-  if decisione >= 60 and decisione < 80 [
-    ; Novità: Si mette in modalità ricerca attiva!
-    set stato "cerca-amico"
-    set timer-attesa 100 + random 150 ; Ha questo tempo a disposizione per trovare qualcuno
-  ]
-  
-  if decisione >= 80 [
-    set stato "esplora"
-    set timer-attesa 100 + random 150 
-  ]
-  
-  ; DEBUG: label per capire lo stato di ogni agente
+  ;; Aggiorna la label visiva
   set label stato
   set label-color black
 end
@@ -358,6 +487,32 @@ to calcola-percorsi
       set dist-giochi min (list dist-giochi (min [dist-giochi] of neighbors4 + 1))
       set dist-bagno min (list dist-bagno (min [dist-bagno] of neighbors4 + 1))
     ]
+  ]
+end
+
+to rifletti [ evento-attuale ]
+  if is-ocean? = true [
+    ; Prepara il profilo in formato compatto
+    let mio-profilo (word "O:" precision trait-O 1 " C:" precision trait-C 1 " E:" precision trait-E 1 " A:" precision trait-A 1 " N:" precision trait-N 1)
+    
+    ; --- Passaggio sicuro delle variabili ---
+    py:set "profilo_py" mio-profilo
+    py:set "memoria_py" memoria
+    py:set "evento_py" evento-attuale
+    
+    ; Interroga Ollama senza incollare le stringhe
+    let pensiero py:runresult "genera_pensiero(profilo_py, memoria_py, evento_py)"
+    
+    ; Stampa il pensiero nella console
+    print (word "Agente " who " | Evento: " evento-attuale)
+    print (word "   -> Pensiero: " pensiero)
+    print "--------------------------------------------------"
+    
+    ; AGGIORNA LA MEMORIA: Aggiungiamo l'ultimo pensiero ai ricordi
+    set memoria (word "In precedenza: " evento-attuale ". Ho pensato: " pensiero)
+    
+    ; Opzionale: mostra un riassunto sulla testa
+    set label pensiero
   ]
 end]]></code>
   <widgets>
