@@ -528,6 +528,13 @@ to go
         rifletti "Che bello, inizio a giocare!"
       ]
     ]
+    
+    ; --- FORZA IL NOME COME ETICHETTA PER GLI AGENTI OCEAN ---
+      if is-ocean? = true [
+        set label (word "Agente " who)
+        set label-color black
+      ]
+    
   ]
 
   tick
@@ -535,7 +542,35 @@ end
 
 to scegli-nuovo-obiettivo
   ; Se sto seguendo qualcuno, il mio libero arbitrio si disattiva!
-  if amico-seguito != nobody [ stop ]
+  ; --- NOVITÀ: LOGICA DEL FOLLOWER (FLOCKING) ---
+    if amico-seguito != nobody [
+      
+      ; Se sono a più di 1.5 passi dal mio leader, cerco di raggiungerlo
+      if distance amico-seguito > 1.5 [
+        let leader-patch [patch-here] of amico-seguito
+        
+        ; Guardo i vicini liberi (no muri, no altre persone)
+        let vicini-liberi neighbors with [walkable? = true and not any? turtles-here]
+        
+        if any? vicini-liberi [
+          ; Trovo la mattonella libera che mi porta fisicamente più vicino al leader
+          let patch-migliore min-one-of vicini-liberi [distance leader-patch]
+          
+          ; Controllo se fare quel passo mi avvicina effettivamente a lui
+          ifelse [distance leader-patch] of patch-migliore < distance leader-patch [
+            ; Se la strada è libera, vado verso di lui
+            face patch-migliore
+            move-to patch-migliore
+          ] [
+            ; Se c'è un ostacolo e la linea retta è bloccata,
+            ; faccio un passo "a caso" sui vicini liberi per scivolare lungo il muro!
+            let passo-laterale one-of vicini-liberi
+            face passo-laterale
+            move-to passo-laterale
+          ]
+        ]
+      ]
+    ]
   
   ifelse is-ocean? = false [
     ;; ----------------------------------------------------
