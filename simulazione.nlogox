@@ -120,6 +120,40 @@ to setup
   ]
   
   calcola-percorsi
+  
+    ; Avvia l'ambiente Python 
+  py:setup py:python 
+
+  ; Definiamo entrambe le funzioni Python: genera_pensiero e chiedi_a_ollama
+  py:run (word
+    "import urllib.request\n"
+    "import json\n"
+    
+    ; --- genera_pensiero ---
+    "def genera_pensiero(profilo, ricordi, evento):\n"
+    "    url = 'http://localhost:11434/api/generate'\n"
+    "    prompt = f'Sei in un bar. Tratti OCEAN: {profilo}. I tuoi ricordi: {ricordi}. Ora sta succedendo questo: {evento}. Formula un breve pensiero interiore (max 15 parole) coerente con la tua personalità e i tuoi ricordi.'\n"
+    "    data = {'model': 'gemma3:4b', 'prompt': prompt, 'stream': False}\n"
+    "    req = urllib.request.Request(url, data=json.dumps(data).encode('utf-8'), headers={'Content-Type': 'application/json'})\n"
+    "    try:\n"
+    "        with urllib.request.urlopen(req) as res:\n"
+    "            return json.loads(res.read().decode('utf-8'))['response'].strip()\n"
+    "    except Exception as e:\n"
+    "        return f'ERRORE: {str(e)}'\n"
+    "\n"
+    
+    ; --- chiedi_a_ollama ---
+    "def chiedi_a_ollama(profilo, contesto):\n"
+    "    url = 'http://localhost:11434/api/generate'\n"
+    "    prompt = f'{contesto} Tieni conto del tuo profilo: {profilo}. Rispondi con una breve frase di saluto parlata (max 10 parole).'\n"
+    "    data = {'model': 'gemma3:4b', 'prompt': prompt, 'stream': False}\n"
+    "    req = urllib.request.Request(url, data=json.dumps(data).encode('utf-8'), headers={'Content-Type': 'application/json'})\n"
+    "    try:\n"
+    "        with urllib.request.urlopen(req) as res:\n"
+    "            return json.loads(res.read().decode('utf-8'))['response'].strip()\n"
+    "    except Exception as e:\n"
+    "        return f'ERRORE: {str(e)}'\n"
+  )
 
   ; SPAWN TURTLES
   ;; 1. CREAZIONE DEI XX AGENTI STANDARD
@@ -159,40 +193,6 @@ to setup
     move-to one-of patches with [zona = "entrata-uscita"]
     scegli-nuovo-obiettivo
   ]
-
-  ; Avvia l'ambiente Python 
-  py:setup py:python 
-
-  ; Definiamo entrambe le funzioni Python: genera_pensiero e chiedi_a_ollama
-  py:run (word
-    "import urllib.request\n"
-    "import json\n"
-    
-    ; --- genera_pensiero ---
-    "def genera_pensiero(profilo, ricordi, evento):\n"
-    "    url = 'http://localhost:11434/api/generate'\n"
-    "    prompt = f'Sei in un bar. Tratti OCEAN: {profilo}. I tuoi ricordi: {ricordi}. Ora sta succedendo questo: {evento}. Formula un breve pensiero interiore (max 15 parole) coerente con la tua personalità e i tuoi ricordi.'\n"
-    "    data = {'model': 'gemma3:4b', 'prompt': prompt, 'stream': False}\n"
-    "    req = urllib.request.Request(url, data=json.dumps(data).encode('utf-8'), headers={'Content-Type': 'application/json'})\n"
-    "    try:\n"
-    "        with urllib.request.urlopen(req) as res:\n"
-    "            return json.loads(res.read().decode('utf-8'))['response'].strip()\n"
-    "    except Exception as e:\n"
-    "        return f'ERRORE: {str(e)}'\n"
-    "\n"
-    
-    ; --- chiedi_a_ollama ---
-    "def chiedi_a_ollama(profilo, contesto):\n"
-    "    url = 'http://localhost:11434/api/generate'\n"
-    "    prompt = f'{contesto} Tieni conto del tuo profilo: {profilo}. Rispondi con una breve frase di saluto parlata (max 10 parole).'\n"
-    "    data = {'model': 'gemma3:4b', 'prompt': prompt, 'stream': False}\n"
-    "    req = urllib.request.Request(url, data=json.dumps(data).encode('utf-8'), headers={'Content-Type': 'application/json'})\n"
-    "    try:\n"
-    "        with urllib.request.urlopen(req) as res:\n"
-    "            return json.loads(res.read().decode('utf-8'))['response'].strip()\n"
-    "    except Exception as e:\n"
-    "        return f'ERRORE: {str(e)}'\n"
-  )
 
   reset-ticks  ; Azzera il contatore del tempo (i "ticks")
 end
@@ -503,8 +503,8 @@ to rifletti [ evento-attuale ]
     ; Interroga Ollama senza incollare le stringhe
     let pensiero py:runresult "genera_pensiero(profilo_py, memoria_py, evento_py)"
     
-    ; Stampa il pensiero nella console
-    print (word "Agente " who " | Evento: " evento-attuale)
+    ; Stampa nella console includendo i tratti OCEAN
+    print (word "Agente " who " [" mio-profilo "] | Evento: " evento-attuale)
     print (word "   -> Pensiero: " pensiero)
     print "--------------------------------------------------"
     
