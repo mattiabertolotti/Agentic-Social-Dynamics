@@ -33,6 +33,7 @@ turtles-own [
   trait-N     ;; Neuroticism (0.0 - 1.0)
   
   amico-seguito   ;; Formazione di Legami e "Flocking" Sociale
+  frustrazione    ;; Contagio Emotivo e Frustrazione (Teoria di Hatfield)
 ]
 
 ; -----------------------------------------------------
@@ -166,6 +167,7 @@ to setup
     set timer-attesa 0
     set drink-consumati 0
     set amico-seguito nobody
+    set frustrazione 0
     
     set is-ocean? false ;; Agente standard
     
@@ -181,6 +183,7 @@ to setup
     set timer-attesa 0
     set drink-consumati 0
     set amico-seguito nobody
+    set frustrazione 0
     
     set is-ocean? true ;; Agente intelligente
     
@@ -446,16 +449,37 @@ to go
       
       muovi-verso-destinazione 
       
+      ; --- LOGICA DELLA FRUSTRAZIONE (HATFIELD) ---
+      ; Calcoliamo la soglia di sopportazione. 
+      ; Un nevrotico sbotta a 50, uno calmo resiste fino a 150.
+      let sopportazione-max 120
+      if is-ocean? = true [ set sopportazione-max 150 - (trait-N * 100) ]
+      
+      ; Se sbotto e NON sono un follower sottomesso a un leader, rinuncio!
+      if frustrazione > sopportazione-max and amico-seguito = nobody [
+        set frustrazione 0
+        set stato "esplora"
+        set label "rinuncia"
+        set timer-attesa 50
+        
+        if is-ocean? = true [
+          rifletti "Non ne posso più di questa coda, me ne vado!"
+        ]
+      ]
+      
+      ; --- RESET FRUSTRAZIONE QUANDO SI RAGGIUNGE L'OBIETTIVO ---
       if stato = "verso-cassa" and [dist-cassa] of patch-here = 1 [
         if not any? turtles with [stato = "acquisto-cassa"] [
           set stato "acquisto-cassa" set label stato set timer-attesa 15
-          rifletti "Sto ordinando e pagando alla cassa." 
+          set frustrazione 0  ;; <--- Sollievo!
+          rifletti "Sto ordinando e pagando alla cassa."
         ]
       ]
       
       if stato = "verso-drink" and [dist-drink] of patch-here = 1 [
         if not any? turtles with [stato = "attesa-drink"] [
           set stato "attesa-drink" set label "attesa" set timer-attesa 40
+          set frustrazione 0  ;; <--- Sollievo!
           rifletti "Sono al bancone, aspetto che il barista mi prepari il drink."
         ]
       ]
@@ -463,6 +487,7 @@ to go
       if stato = "verso-birra" and [dist-birra] of patch-here = 1 [
         if not any? turtles with [stato = "attesa-birra"] [
           set stato "attesa-birra" set label "attesa" set timer-attesa 30
+          set frustrazione 0  ;; <--- Sollievo!
           rifletti "Aspetto il mio turno per farmi spillare la birra."
         ]
       ]
@@ -470,6 +495,7 @@ to go
       if stato = "verso-bagno" and [dist-bagno] of patch-here = 1 [
         if not any? turtles with [stato = "bagno"] [
           set stato "bagno" set label stato set timer-attesa 50
+          set frustrazione 0  ;; <--- Sollievo!
           move-to min-one-of (neighbors with [dist-bagno = 0]) [distance myself]
           rifletti "Finalmente sono in bagno."
         ]
@@ -477,6 +503,7 @@ to go
 
       if stato = "verso-giochi" and [dist-giochi] of patch-here = 1 [
         set stato "gioca" set label stato set timer-attesa 100 + random 100
+        set frustrazione 0  ;; <--- Sollievo!
         rifletti "Che bello, inizio a giocare!"
       ]
     ]
@@ -577,6 +604,27 @@ to muovi-verso-destinazione
       if stato = "verso-bagno" [ set distanza-futura [dist-bagno] of patch-migliore ]
 
       ; 2. LOGICA SCORRIMENTO TRAFFICO E CODE
+      ifelse distanza-futura < mia-distanza [
+        ; Se la strada davanti è libera e mi avvicina, vado dritto deciso!
+        face patch-migliore
+        move-to patch-migliore
+        
+        ; Se cammino, mi calmo un po'
+        if frustrazione > 0 [ set frustrazione frustrazione - 1 ]
+      ] [
+        ; L'ostacolo davanti mi blocca la strada.
+        ; --- AUMENTO LA FRUSTRAZIONE ---
+        set frustrazione frustrazione + 2 
+        
+        ifelse mia-distanza <= 3 [
+          ; SONO IN CODA (vicino all'obiettivo)
+          if random 100 < 5 [ face patch-migliore move-to patch-migliore ]
+        ] [
+          ; STO CERCANDO DI USCIRE (lontano dall'obiettivo)
+          if random 100 < 80 [ face patch-migliore move-to patch-migliore ]
+        ]
+      ]
+      
       ifelse distanza-futura < mia-distanza [
         ; Se la strada davanti è libera e mi avvicina, vado dritto deciso!
         face patch-migliore
