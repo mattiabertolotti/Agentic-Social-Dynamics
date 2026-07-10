@@ -34,6 +34,7 @@ turtles-own [
   
   amico-seguito   ;; Formazione di Legami e "Flocking" Sociale
   frustrazione    ;; Contagio Emotivo e Frustrazione (Teoria di Hatfield)
+  memoria-relazionale   ;; Memoria Relazionale (Direct Reciprocity)
 ]
 
 ; -----------------------------------------------------
@@ -168,6 +169,7 @@ to setup
     set drink-consumati 0
     set amico-seguito nobody
     set frustrazione 0
+    set memoria-relazionale []
     
     set is-ocean? false ;; Agente standard
     
@@ -184,6 +186,7 @@ to setup
     set drink-consumati 0
     set amico-seguito nobody
     set frustrazione 0
+    set memoria-relazionale []
     
     set is-ocean? true ;; Agente intelligente
     
@@ -284,77 +287,86 @@ to go
     
     ; LOGICA DI INCONTRO: "Se sto cercando un amico, mi guardo intorno ad ogni passo"
     if stato = "cerca-amico" [
-      let amici other turtles in-radius 1.5 with [stato = "esplora" or stato = "cerca-amico"]
+      let amici other turtles in-radius 1.5 with [(stato = "esplora" or stato = "cerca-amico") and amico-seguito = nobody]
       
       if any? amici [
         let amico one-of amici
         
         set stato "chiacchiera"
-        set timer-attesa 150 + random 50 ; Timer base
+        set timer-attesa 150 + random 50
         face amico
         
-        ; Memorizziamo i tipi di agenti
         let iniziatore-ocean? is-ocean?
         let amico-ocean? [is-ocean?] of amico
+        let id-iniziatore who
+        let id-amico [who] of amico
         
-        ; Fermo l'amico
         ask amico [
           set stato "chiacchiera"
           set timer-attesa [timer-attesa] of myself
           face myself
         ]
         
-        ; --- AVVIAMO IL DIALOGO SOLO SE ALMENO UNO È INTELLIGENTE ---
         if (iniziatore-ocean? = true) or (amico-ocean? = true) [
           print "--- INIZIO DIALOGO ---"
+          
+          ; --- 1. RECUPERO MEMORIA RELAZIONALE ---
+          let ricordo-iniziatore ricordo-con id-amico
+          let ricordo-amico [ricordo-con id-iniziatore] of amico
+          
+          let battuta-iniziatore ""
+          let battuta-amico ""
           
           ; =====================================================
           ; CASO 1: INTELLIGENTE vs INTELLIGENTE (5-15 battute)
           ; =====================================================
           if iniziatore-ocean? = true and amico-ocean? = true [
-            let num-battute 5 + random 11 ; Sceglie un numero tra 5 e 15
-            
-            ; Aumentiamo il timer visivo in base a quanto parlano
+            let num-battute 5 + random 11
             set timer-attesa (num-battute * 30)
             ask amico [ set timer-attesa [timer-attesa] of myself ]
             
-            ; Prepariamo profili e MEMORIE
             let prof-iniz (word "O:" precision trait-O 1 " C:" precision trait-C 1 " E:" precision trait-E 1 " A:" precision trait-A 1 " N:" precision trait-N 1)
             let mem-iniz memoria
-            
             let prof-amico (word "O:" precision [trait-O] of amico 1 " C:" precision [trait-C] of amico 1 " E:" precision [trait-E] of amico 1 " A:" precision [trait-A] of amico 1 " N:" precision [trait-N] of amico 1)
             let mem-amico [memoria] of amico
             
             ; -- Battuta 1 (Iniziatore) --
             py:set "profilo_py" prof-iniz
-            ; Aggiungiamo la memoria al contesto della prima battuta
-            py:set "contesto_py" (word "Incontri un amico. I tuoi ricordi recenti: " mem-iniz ". Inizia tu a parlare: commenta il tuo ricordo in modo molto colloquiale e buttala lì.")
+            let cont-1 (word "Incontri l'Agente " id-amico ". I tuoi ricordi: " mem-iniz ". ")
+            ifelse ricordo-iniziatore != "" [
+              set cont-1 (word cont-1 "Vi siete già parlati prima! L'ultima volta ti ha detto: '" ricordo-iniziatore "'. Inizia a parlare facendo una battuta palese sul fatto che vi siete rivisti e su quello che vi eravate detti.")
+            ] [
+              set cont-1 (word cont-1 "È la prima volta che vi parlate stasera. Inizia tu a parlare commentando il tuo ricordo recente in modo colloquiale.")
+            ]
+            py:set "contesto_py" cont-1
             
             let ultima-frase py:runresult "chiedi_a_ollama(profilo_py, contesto_py)"
+            set battuta-iniziatore ultima-frase
             set label ultima-frase set label-color black
             print (word "Agente " who " (Intelligente): " ultima-frase)
             
-            ; -- Ciclo botta e risposta --
             let contatore 1
             repeat (num-battute - 1) [
               set contatore contatore + 1
-              
               ifelse contatore mod 2 = 0 [
-                ; Turno Pari: tocca all'Amico
+                ; Amico
                 py:set "profilo_py" prof-amico
-                ; Inseriamo la memoria dell'amico nella sua risposta
-                py:set "contesto_py" (word "Un amico ti ha appena detto: '" ultima-frase "'. I tuoi ricordi recenti: " mem-amico ". Rispondi agganciandoti alla sua frase in modo secco, usando il tuo ricordo come argomento.")
-                
+                let cont-2 (word "L'Agente " id-iniziatore " ti ha detto: '" ultima-frase "'. I tuoi ricordi: " mem-amico ". ")
+                if ricordo-amico != "" and contatore = 2 [
+                   set cont-2 (word cont-2 "Ricordi che l'ultima volta che vi siete visti ti aveva detto: '" ricordo-amico "'. ")
+                ]
+                set cont-2 (word cont-2 "Rispondi agganciandoti alla sua frase in modo secco, usando il tuo ricordo come argomento.")
+                py:set "contesto_py" cont-2
                 set ultima-frase py:runresult "chiedi_a_ollama(profilo_py, contesto_py)"
+                set battuta-amico ultima-frase
                 ask amico [ set label ultima-frase set label-color black ]
-                print (word "Agente " [who] of amico " (Intelligente): " ultima-frase)
+                print (word "Agente " id-amico " (Intelligente): " ultima-frase)
               ] [
-                ; Turno Dispari: tocca all'Iniziatore
+                ; Iniziatore
                 py:set "profilo_py" prof-iniz
-                ; Inseriamo la memoria dell'iniziatore
-                py:set "contesto_py" (word "L'amico ti ha appena detto: '" ultima-frase "'. I tuoi ricordi: " mem-iniz ". Ribatti in modo informale e spontaneo, senza troppi giri di parole.")
-                
+                py:set "contesto_py" (word "L'Agente " id-amico " ti ha detto: '" ultima-frase "'. I tuoi ricordi: " mem-iniz ". Ribatti in modo informale e spontaneo.")
                 set ultima-frase py:runresult "chiedi_a_ollama(profilo_py, contesto_py)"
+                set battuta-iniziatore ultima-frase
                 set label ultima-frase set label-color black
                 print (word "Agente " who " (Intelligente): " ultima-frase)
               ]
@@ -367,22 +379,29 @@ to go
           if iniziatore-ocean? = true and amico-ocean? = false [
             let prof-iniz (word "O:" precision trait-O 1 " C:" precision trait-C 1 " E:" precision trait-E 1 " A:" precision trait-A 1 " N:" precision trait-N 1)
             
-            ; 1. Iniziatore
             py:set "profilo_py" prof-iniz
-            py:set "contesto_py" "Hai appena incontrato un amico nel locale. Salutalo in base al tuo profilo."
+            let cont-1 (word "Incontri l'Agente " id-amico ". ")
+            ifelse ricordo-iniziatore != "" [
+               set cont-1 (word cont-1 "Vi siete già parlati! L'ultima volta ti ha detto: '" ricordo-iniziatore "'. Fagli una battuta ironica su questo.")
+            ] [
+               set cont-1 (word cont-1 "È la prima volta che vi parlate. Salutalo colloquialmente.")
+            ]
+            py:set "contesto_py" cont-1
+            
             let msg1 py:runresult "chiedi_a_ollama(profilo_py, contesto_py)"
+            set battuta-iniziatore msg1
             set label msg1 set label-color black
             print (word "Agente " who " (Intelligente): " msg1)
             
-            ; 2. Amico Standard
             let risposte-stupide ["Ah sì, figata!" "Io tutto bene, tu?" "Vero, c'è un sacco di gente!" "Dai, ci si becca in giro!"]
             let msg2 one-of risposte-stupide
+            set battuta-amico msg2
             ask amico [ set label msg2 set label-color black ]
-            print (word "Agente " [who] of amico " (Standard): " msg2)
+            print (word "Agente " id-amico " (Standard): " msg2)
             
-            ; 3. Iniziatore chiude
-            py:set "contesto_py" (word "L'amico ti ha appena risposto dicendo: '" msg2 "'. Fagli una breve battuta finale per concludere la chiacchierata.")
+            py:set "contesto_py" (word "L'Agente " id-amico " ti ha risposto: '" msg2 "'. Fagli una breve battuta finale.")
             let msg3 py:runresult "chiedi_a_ollama(profilo_py, contesto_py)"
+            set battuta-iniziatore msg3
             set label msg3
             print (word "Agente " who " (Intelligente): " msg3)
           ]
@@ -391,52 +410,54 @@ to go
           ; CASO 3: STANDARD vs INTELLIGENTE (2 fasi)
           ; =====================================================
           if iniziatore-ocean? = false and amico-ocean? = true [
-            ; 1. Iniziatore Standard
             let risposte-stupide ["Ciao!" "Ehi! Come butta?" "Tutto bene?" "Che ressa stasera!" "Bella serata eh!"]
             let msg1 one-of risposte-stupide
+            set battuta-iniziatore msg1
             set label msg1 set label-color black
             print (word "Agente " who " (Standard): " msg1)
             
-            ; 2. Amico Intelligente
             let prof-amico (word "O:" precision [trait-O] of amico 1 " C:" precision [trait-C] of amico 1 " E:" precision [trait-E] of amico 1 " A:" precision [trait-A] of amico 1 " N:" precision [trait-N] of amico 1)
             py:set "profilo_py" prof-amico
-            py:set "contesto_py" (word "Un amico ti ha appena salutato dicendo: '" msg1 "'. Rispondi coerentemente con il tuo profilo.")
+            let cont-2 (word "L'Agente " id-iniziatore " ti ha salutato dicendo: '" msg1 "'. ")
+            ifelse ricordo-amico != "" [
+               set cont-2 (word cont-2 "Vi eravate già parlati, l'ultima volta ti aveva detto: '" ricordo-amico "'. Rispondi citando il passato.")
+            ] [
+               set cont-2 (word cont-2 "Rispondi al saluto in modo coerente col tuo profilo.")
+            ]
+            py:set "contesto_py" cont-2
+            
             let msg2 py:runresult "chiedi_a_ollama(profilo_py, contesto_py)"
+            set battuta-amico msg2
             ask amico [ set label msg2 set label-color black ]
-            print (word "Agente " [who] of amico " (Intelligente): " msg2)
+            print (word "Agente " id-amico " (Intelligente): " msg2)
           ]
           
+          ; --- 2. SALVATAGGIO NELLA MEMORIA RELAZIONALE ---
+          ; Ognuno dei due salva in memoria l'ultima battuta dell'altro!
+          if battuta-amico != "" [ aggiorna-ricordo id-amico battuta-amico ]
+          if battuta-iniziatore != "" [ ask amico [ aggiorna-ricordo id-iniziatore battuta-iniziatore ] ]
+          
           ; -----------------------------------------------------
-          ; FASE 4: FORMAZIONE DEL GRUPPO
+          ; FASE 4: FORMAZIONE DEL GRUPPO (FLOCKING)
           ; -----------------------------------------------------
-          ; Calcoliamo l'affinità (aggiungiamo una base random per imprevedibilità)
           let affinita random 50
           if iniziatore-ocean? = true [ set affinita affinita + (trait-E * 30) + (trait-A * 20) ]
           if amico-ocean? = true [ set affinita affinita + ([trait-E] of amico * 30) + ([trait-A] of amico * 20) ]
           
-          ; Se l'affinità è molto alta (> 75), formano un gruppo
           if affinita > 75 [
-            ; Creiamo un legame visivo in NetLogo (una linea gialla che li unisce)
             create-link-with amico [ set color yellow set thickness 0.2 ]
-            
-            ; L'amico si sottomette e diventa il follower dell'iniziatore
             ask amico [ set amico-seguito myself ]
             
             if iniziatore-ocean? = true [
               print "-> I due agenti hanno fatto amicizia e ora si muoveranno in gruppo!"
-              
-              ; Facciamo riflettere l'agente OCEAN su questo nuovo legame per salvarlo in memoria
               py:set "memoria_py" memoria
               py:set "profilo_py" (word "O:" precision trait-O 1 " C:" precision trait-C 1 " E:" precision trait-E 1 " A:" precision trait-A 1 " N:" precision trait-N 1)
-              let pensiero-gruppo py:runresult "genera_pensiero(profilo_py, memoria_py, 'Ho appena incontrato una persona con cui ho legato, abbiamo formato un gruppo per la serata.')"
-              
-              set memoria (word "Ho fatto amicizia con qualcuno. Pensiero: " pensiero-gruppo)
+              let pensiero-gruppo py:runresult "genera_pensiero(profilo_py, memoria_py, 'Ho appena formato un gruppo per girare il locale.')"
+              set memoria (word "Ho fatto amicizia. Pensiero: " pensiero-gruppo)
             ]
           ]
           
           print "----------------------"
-          
-          ; Azzeriamo il timer per permettergli di riprendere a muoversi all'istante
           set timer-attesa 5
           ask amico [ set timer-attesa 5 ]
         ]
@@ -703,6 +724,23 @@ to rifletti [ evento-attuale ]
     ; Opzionale: mostra un riassunto sulla testa
     set label pensiero
   ]
+end
+
+; --- MEMORIA RELAZIONALE ---
+
+to-report ricordo-con [ id-amico ]
+  ; Cerca se nella memoria esiste già una conversazione con questo specifico ID
+  let record filter [ x -> item 0 x = id-amico ] memoria-relazionale
+  if empty? record [ report "" ]
+  ; Se c'è, restituisce l'ultima frase pronunciata dall'amico
+  report item 1 (item 0 record)
+end
+
+to aggiorna-ricordo [ id-amico frase-da-ricordare ]
+  ; Cancella il vecchio ricordo di questo agente (per non intasare la memoria)
+  set memoria-relazionale filter [ x -> item 0 x != id-amico ] memoria-relazionale
+  ; Salva il nuovo ricordo sotto forma di lista: [ ID , "frase" ]
+  set memoria-relazionale lput (list id-amico frase-da-ricordare) memoria-relazionale
 end]]></code>
   <widgets>
     <view x="368" wrappingAllowedX="true" y="10" frameRate="30.0" minPycor="0" height="516" showTickCounter="true" patchSize="4.0" fontSize="10" wrappingAllowedY="true" width="516" tickCounterLabel="ticks" maxPycor="127" updateMode="0" maxPxcor="127" minPxcor="0"></view>
