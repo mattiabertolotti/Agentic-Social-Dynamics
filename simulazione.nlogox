@@ -2,6 +2,13 @@
 <model version="NetLogo 7.0.3" snapToGrid="true">
   <code><![CDATA[extensions [py]
 
+; --- VARIABILI GLOBALI (Dell'intero locale) ---
+globals [
+  totale-dialoghi
+  totale-gruppi-formati
+  media-estroversione-iniziale
+]
+
 ; -----------------------------------------------------
 ; 1. GLOBALS
 ; -----------------------------------------------------
@@ -36,6 +43,18 @@ turtles-own [
   amico-seguito   ;; Formazione di Legami e "Flocking" Sociale
   frustrazione    ;; Contagio Emotivo e Frustrazione (Teoria di Hatfield)
   memoria-relazionale   ;; Memoria Relazionale (Direct Reciprocity)
+  
+  ;; --- VARIABILI PER STATISTICHE FINALI ---
+  count-bagno
+  tot-tempo-bagno
+  count-giochi
+  tot-tempo-giochi
+  tempo-gioco
+  drink-presi
+  birre-prese
+  tot-attesa-cassa
+  count-cassa
+  picco-frustrazione
 ]
 
 ; -----------------------------------------------------
@@ -43,6 +62,9 @@ turtles-own [
 ; -----------------------------------------------------
 to setup
   clear-all  ; Pulisce il mondo da simulazioni precedenti
+  
+  set totale-dialoghi 0
+  set totale-gruppi-formati 0
 
   ; Importa la mappa e colora i patches
   import-pcolors "map.png" 
@@ -176,6 +198,17 @@ to setup
     
     move-to one-of patches with [zona = "entrata-uscita"]
     scegli-nuovo-obiettivo
+    
+    set count-bagno 0
+    set tot-tempo-bagno 0
+    set count-giochi 0
+    set tot-tempo-giochi 0
+    set tempo-gioco 0
+    set drink-presi 0
+    set birre-prese 0
+    set tot-attesa-cassa 0
+    set count-cassa 0
+    set picco-frustrazione 0
   ]
 
   ;; 2. CREAZIONE DEI 10 AGENTI OCEAN
@@ -204,7 +237,21 @@ to setup
 
     move-to one-of patches with [zona = "entrata-uscita"]
     scegli-nuovo-obiettivo
+    
+    set count-bagno 0
+    set tot-tempo-bagno 0
+    set count-giochi 0
+    set tot-tempo-giochi 0
+    set tempo-gioco 0
+    set drink-presi 0
+    set birre-prese 0
+    set tot-attesa-cassa 0
+    set count-cassa 0
+    set picco-frustrazione 0
   ]
+  
+  ; Calcola la media dell'estroversione degli agenti OCEAN prima che bevano!
+  set media-estroversione-iniziale mean [trait-E] of turtles with [is-ocean? = true]
 
   reset-ticks  ; Azzera il contatore del tempo (i "ticks")
 end
@@ -214,6 +261,10 @@ end
 ; -----------------------------------------------------
 to go
   ask turtles [
+    ; --- TRACCIAMENTO ATTESA CASSA ---
+    if stato = "verso-cassa" [
+      set tot-attesa-cassa tot-attesa-cassa + 1
+    ]
     
     ; -----------------------------------------------------
     ; 1. GESTIONE DEI TIMER E CAMBIO DI STATO
@@ -232,6 +283,10 @@ to go
         
         if stato-finito = "attesa-drink" or stato-finito = "attesa-birra" [
           set drink-consumati drink-consumati + 1
+          
+          ; --- TRACCIAMENTO ---
+          if stato-finito = "attesa-drink" [ set drink-presi drink-presi + 1 ]
+          if stato-finito = "attesa-birra" [ set birre-prese birre-prese + 1 ]
           
           ; --- EFFETTO DELL'ALCOL SUI TRATTI OCEAN ---
           if is-ocean? = true [
@@ -372,6 +427,7 @@ to go
         
         if (iniziatore-ocean? = true) or (amico-ocean? = true) [
           print "--- INIZIO DIALOGO ---"
+          set totale-dialoghi totale-dialoghi + 1
           
           ; --- 1. RECUPERO MEMORIA RELAZIONALE ---
           let ricordo-iniziatore ricordo-con id-amico
@@ -508,6 +564,7 @@ to go
           if amico-ocean? = true [ set affinita affinita + ([trait-E] of amico * 30) + ([trait-A] of amico * 20) ]
           
           if affinita > 75 [
+            set totale-gruppi-formati totale-gruppi-formati + 1
             create-link-with amico [ set color yellow set thickness 0.2 ]
             ask amico [ set amico-seguito myself ]
             
@@ -555,7 +612,8 @@ to go
       if stato = "verso-cassa" and [dist-cassa] of patch-here = 1 [
         if not any? turtles with [stato = "acquisto-cassa"] [
           set stato "acquisto-cassa" set label stato set timer-attesa 15
-          set frustrazione 0  ;; <--- Sollievo!
+          set frustrazione 0
+          set count-cassa count-cassa + 1  ;; TRACCIAMENTO
           rifletti "Sto ordinando e pagando alla cassa."
         ]
       ]
@@ -579,15 +637,19 @@ to go
       if stato = "verso-bagno" and [dist-bagno] of patch-here = 1 [
         if not any? turtles with [stato = "bagno"] [
           set stato "bagno" set label stato set timer-attesa 50
-          set frustrazione 0  ;; <--- Sollievo!
+          set frustrazione 0
           move-to min-one-of (neighbors with [dist-bagno = 0]) [distance myself]
+          set count-bagno count-bagno + 1               ;; TRACCIAMENTO
+          set tot-tempo-bagno tot-tempo-bagno + 50      ;; TRACCIAMENTO
           rifletti "Finalmente sono in bagno."
         ]
       ]
 
       if stato = "verso-giochi" and [dist-giochi] of patch-here = 1 [
         set stato "gioca" set label stato set timer-attesa 100 + random 100
-        set frustrazione 0  ;; <--- Sollievo!
+        set frustrazione 0 
+        set count-giochi count-giochi + 1                   ;; TRACCIAMENTO
+        set tot-tempo-giochi tot-tempo-giochi + tempo-gioco ;; TRACCIAMENTO
         rifletti "Che bello, inizio a giocare!"
       ]
     ]
@@ -601,6 +663,13 @@ to go
   ]
 
   tick
+  
+  if ticks = 1000 [
+    esporta-statistiche
+    print "Simulazione terminata (1000 ticks). Dati esportati con successo!"
+    stop
+  ]
+  
 end
 
 to scegli-nuovo-obiettivo
@@ -734,6 +803,7 @@ to muovi-verso-destinazione
         ; L'ostacolo davanti mi blocca la strada.
         ; --- AUMENTO LA FRUSTRAZIONE ---
         set frustrazione frustrazione + 2 
+        if frustrazione > picco-frustrazione [ set picco-frustrazione frustrazione ]
         
         ifelse mia-distanza <= 3 [
           ; SONO IN CODA (vicino all'obiettivo)
@@ -847,6 +917,84 @@ end
 ; --- TRADUTTORE PROFILO PER OLLAMA ---
 to-report mio-profilo-esteso
   report (word "Apertura mentale: " precision trait-O 1 ", Coscienziosità: " precision trait-C 1 ", Estroversione: " precision trait-E 1 ", Amicalità: " precision trait-A 1 ", Nevroticismo: " precision trait-N 1)
+end
+
+; -----------------------------------------------------
+; FUNZIONE PER ESPORTARE LE STATISTICHE
+; -----------------------------------------------------
+to esporta-statistiche
+  ; Crea (o sovrascrive) un file di testo nella stessa cartella del modello
+  file-open "statistiche_serata.txt"
+  file-print "=== STATISTICHE FINALI DELLA SERATA (1000 ticks) ==="
+  file-print ""
+  
+  ; 1. BAGNO
+  let agenti-bagno count turtles with [count-bagno > 0]
+  let tempo-medio-bagno 0
+  if agenti-bagno > 0 [ 
+    ; Calcola la media dei tick passati al bagno per ogni agente che ci è andato
+    set tempo-medio-bagno mean [tot-tempo-bagno / count-bagno] of turtles with [count-bagno > 0] 
+  ]
+  file-print (word "- N° agenti stati al bagno: " agenti-bagno " (Tempo medio per visita: " precision tempo-medio-bagno 1 " ticks)")
+  
+  ; 2. GIOCHI
+  let agenti-giochi count turtles with [count-giochi > 0]
+  let tempo-medio-giochi 0
+  if agenti-giochi > 0 [ 
+    set tempo-medio-giochi mean [tot-tempo-giochi / count-giochi] of turtles with [count-giochi > 0] 
+  ]
+  file-print (word "- N° agenti che hanno giocato: " agenti-giochi " (Tempo medio per giocata: " precision tempo-medio-giochi 1 " ticks)")
+  
+  ; 3. DRINK E BIRRE
+  let agenti-drink count turtles with [drink-presi > 0]
+  file-print (word "- N° agenti che hanno consumato almeno un drink: " agenti-drink)
+  
+  let agenti-birre count turtles with [birre-prese > 0]
+  file-print (word "- N° agenti che hanno consumato almeno una birra: " agenti-birre)
+  
+  ; 4. CASSA (Calcolo del tempo di attesa medio per visita)
+  let attese-totali-cassa sum [count-cassa] of turtles
+  let tempo-medio-cassa 0
+  if attese-totali-cassa > 0 [ 
+    ; Divide il tempo totale di tutti passato in coda per il numero effettivo di acquisti
+    set tempo-medio-cassa (sum [tot-attesa-cassa] of turtles) / attese-totali-cassa 
+  ]
+  file-print (word "- Tempo medio di attesa in coda verso la cassa: " precision tempo-medio-cassa 1 " ticks")
+
+  ; ... (vecchio codice di esporta-statistiche) ...
+
+  ; 5. VENDITE TOTALI
+  let vendite-totali (sum [drink-presi] of turtles) + (sum [birre-prese] of turtles)
+  file-print ""
+  file-print (word "- Volume totale vendite (Drink + Birre): " vendite-totali " consumazioni")
+  
+  ; 6. STATISTICHE SOCIALI
+  file-print ""
+  file-print "=== DINAMICHE SOCIALI E PSICOLOGICHE ==="
+  file-print (word "- Dialoghi totali scaturiti: " totale-dialoghi)
+  file-print (word "- Totale gruppi/amicizie formati: " totale-gruppi-formati)
+  
+  ; 7. STRESS E FRUSTRAZIONE
+  let stress-medio 0
+  if any? turtles [ set stress-medio mean [picco-frustrazione] of turtles ]
+  file-print (word "- Picco medio di stress per il traffico: " precision stress-medio 1 " (Su un limite di sopportazione ~100)")
+  
+  ; 8. VARIAZIONE OCEAN (EFFETTO ALCOL/SERATA)
+  let media-estroversione-finale 0
+  if any? turtles with [is-ocean? = true] [
+    set media-estroversione-finale mean [trait-E] of turtles with [is-ocean? = true]
+  ]
+  let delta-estroversione (media-estroversione-finale - media-estroversione-iniziale)
+  
+  file-print ""
+  file-print "- Impatto della serata sui tratti psicologici degli agenti OCEAN:"
+  file-print (word "   -> Estroversione media INIZIALE: " precision media-estroversione-iniziale 2)
+  file-print (word "   -> Estroversione media FINALE:   " precision media-estroversione-finale 2)
+  file-print (word "   -> Variazione netta:             " ifelse-value (delta-estroversione >= 0) [word "+" precision delta-estroversione 2] [precision delta-estroversione 2])
+  
+  ; Chiude il file salvandolo in modo sicuro
+  file-close
+end
 end]]></code>
   <widgets>
     <view x="368" wrappingAllowedX="true" y="10" frameRate="30.0" minPycor="0" height="516" showTickCounter="true" patchSize="4.0" fontSize="10" wrappingAllowedY="true" width="516" tickCounterLabel="ticks" maxPycor="127" updateMode="0" maxPxcor="127" minPxcor="0"></view>
