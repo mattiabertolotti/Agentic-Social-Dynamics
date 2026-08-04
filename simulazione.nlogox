@@ -341,10 +341,8 @@ to go
       set timer-gruppo timer-gruppo + 1
       
       ; 1. LOGICA DI SEPARAZIONE (Ci siamo persi o stufati!)
-      ; Se il gruppo dura troppo, o se la folla ci ha separati fisicamente (distanza > 15)
       if (timer-gruppo > 500 and random 100 < 5) or (distance amico-seguito > 15) [
         
-        ; Se ci siamo persi per la distanza, l'agente OCEAN fa una riflessione
         if distance amico-seguito > 15 and is-ocean? = true [
           rifletti "Accidenti, c'è troppa confusione, ho perso di vista il mio amico!"
         ]
@@ -353,34 +351,41 @@ to go
         ask my-links [ die ]
         set timer-gruppo 0
         set label "libero"
+        
+        ; SBLOCCO ZOMBIE: Obblighiamo l'ex-follower a trovarsi subito un nuovo obiettivo!
+        scegli-nuovo-obiettivo 
       ]
       
-      ; 2. LOGICA DI INSEGUIMENTO INTUITIVO
+      ; 2. LOGICA DI INSEGUIMENTO (Anti-Deadlock)
       if amico-seguito != nobody [
-        ifelse distance amico-seguito <= 1.5 [
-          set label "in gruppo"
+        set label "in gruppo"
+        let stato-leader [stato] of amico-seguito
+        
+        ; Se il leader si sta muovendo verso un obiettivo, COPIO il suo obiettivo e mi muovo con lui
+        ifelse member? stato-leader ["verso-cassa" "verso-drink" "verso-birra" "verso-bagno" "verso-giochi"] [
+          let mio-vecchio-stato stato
+          set stato stato-leader
+          muovi-verso-destinazione   ; Mi muovo in modo fluido verso la stessa meta
+          set stato mio-vecchio-stato
         ] [
-          let stato-leader [stato] of amico-seguito
-          
-          ; STRATEGIA A: Il leader sta andando verso una zona specifica?
-          ; Copiamo la sua destinazione per sfruttare i "profumi" ed evitare i muri in modo perfetto!
-          ifelse member? stato-leader ["verso-cassa" "verso-drink" "verso-birra" "verso-bagno" "verso-giochi"] [
-            let mio-vecchio-stato stato
-            set stato stato-leader
-            muovi-verso-destinazione
-            set stato mio-vecchio-stato
+          ; Se il leader sta esplorando a caso, faccio lo stesso per non intralciarlo
+          ifelse member? stato-leader ["esplora" "cerca-amico"] [
+            right random 60 - 30
+            let prossima-patch patch-ahead 1
+            if prossima-patch != nobody and [walkable?] of prossima-patch = true and not any? turtles-on prossima-patch [
+              forward 1
+            ]
           ] [
-            ; STRATEGIA B: Il leader è fermo (es. sta bevendo). Mi avvicino a vista.
+            ; Se il leader è FERMO (es. sta ordinando da bere o è in bagno), mi avvicino e aspetto
             let target-patch [patch-here] of amico-seguito
             let vicini-liberi neighbors with [walkable? = true and not any? turtles-here]
             
-            if any? vicini-liberi [
+            if distance target-patch > 1.5 and any? vicini-liberi [
               let patch-migliore min-one-of vicini-liberi [distance target-patch]
               ifelse [distance target-patch] of patch-migliore < distance target-patch [
                 face patch-migliore
                 move-to patch-migliore
               ] [
-                ; Se c'è un ostacolo vicino al leader, mi sposto di lato senza incastrarmi
                 let passo-laterale one-of vicini-liberi
                 face passo-laterale
                 move-to passo-laterale
@@ -994,7 +999,6 @@ to esporta-statistiche
   
   ; Chiude il file salvandolo in modo sicuro
   file-close
-end
 end]]></code>
   <widgets>
     <view x="368" wrappingAllowedX="true" y="10" frameRate="30.0" minPycor="0" height="516" showTickCounter="true" patchSize="4.0" fontSize="10" wrappingAllowedY="true" width="516" tickCounterLabel="ticks" maxPycor="127" updateMode="0" maxPxcor="127" minPxcor="0"></view>
