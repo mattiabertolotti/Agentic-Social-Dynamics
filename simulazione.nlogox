@@ -651,10 +651,21 @@ to go
       ]
 
       if stato = "verso-giochi" and [dist-giochi] of patch-here = 1 [
-        set stato "gioca" set label stato set timer-attesa 100 + random 100
-        set frustrazione 0 
-        set count-giochi count-giochi + 1                   ;; TRACCIAMENTO
-        set tot-tempo-giochi tot-tempo-giochi + tempo-gioco ;; TRACCIAMENTO
+        
+        ; 1. Usiamo un nome univoco per evitare conflitti con altre variabili
+        let durata-giocata 100 + random 100 
+        
+        ; 2. Impostiamo l'agente sullo stato di gioco
+        set stato "gioca" 
+        set label stato 
+        set timer-attesa durata-giocata
+        set frustrazione 0  
+        
+        ; 3. TRACCIAMENTO STATISTICHE 
+        set count-giochi count-giochi + 1
+        set tot-tempo-giochi tot-tempo-giochi + durata-giocata 
+        
+        ; 4. Pensiero dell'AI
         rifletti "Che bello, inizio a giocare!"
       ]
     ]
