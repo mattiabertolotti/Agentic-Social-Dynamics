@@ -1,0 +1,209 @@
+=== RUN 1 ===
+=== STATISTICHE FINALI DELLA SERATA (1000 ticks) ===
+
+- N° agenti stati al bagno: 13 (Tempo medio per visita: 50 ticks)
+- N° agenti che hanno giocato: 21 (Tempo medio per giocata: 141.9 ticks)
+- N° agenti che hanno consumato almeno un drink: 12
+- N° agenti che hanno consumato almeno una birra: 10
+- Tempo medio di attesa in coda verso la cassa: 100.8 ticks
+
+- Volume totale vendite (Drink + Birre): 31 consumazioni
+
+=== DINAMICHE SOCIALI E PSICOLOGICHE ===
+- Dialoghi totali scaturiti: 12
+- Totale gruppi/amicizie formati: 6
+- Picco medio di stress per il traffico: 103 (Su un limite di sopportazione ~100)
+
+- Impatto della serata sui tratti psicologici degli agenti OCEAN:
+   -> Estroversione media INIZIALE: 0.55
+   -> Estroversione media FINALE:   0.74
+   -> Variazione netta:             +0.19
+
+=== RUN 2 ===
+=== STATISTICHE FINALI DELLA SERATA (1000 ticks) ===
+
+- N° agenti stati al bagno: 12 (Tempo medio per visita: 50 ticks)
+- N° agenti che hanno giocato: 19 (Tempo medio per giocata: 142.3 ticks)
+- N° agenti che hanno consumato almeno un drink: 11
+- N° agenti che hanno consumato almeno una birra: 12
+- Tempo medio di attesa in coda verso la cassa: 100.8 ticks
+
+- Volume totale vendite (Drink + Birre): 28 consumazioni
+
+=== DINAMICHE SOCIALI E PSICOLOGICHE ===
+- Dialoghi totali scaturiti: 16
+- Totale gruppi/amicizie formati: 4
+- Picco medio di stress per il traffico: 85.9 (Su un limite di sopportazione ~100)
+
+- Impatto della serata sui tratti psicologici degli agenti OCEAN:
+   -> Estroversione media INIZIALE: 0.52
+   -> Estroversione media FINALE:   0.66
+   -> Variazione netta:             +0.15
+
+=== RUN 3 ===
+=== STATISTICHE FINALI DELLA SERATA (1000 ticks) ===
+
+- N° agenti stati al bagno: 11 (Tempo medio per visita: 50 ticks)
+- N° agenti che hanno giocato: 23 (Tempo medio per giocata: 146.8 ticks)
+- N° agenti che hanno consumato almeno un drink: 16
+- N° agenti che hanno consumato almeno una birra: 15
+- Tempo medio di attesa in coda verso la cassa: 107 ticks
+
+- Volume totale vendite (Drink + Birre): 40 consumazioni
+
+=== DINAMICHE SOCIALI E PSICOLOGICHE ===
+- Dialoghi totali scaturiti: 17
+- Totale gruppi/amicizie formati: 3
+- Picco medio di stress per il traffico: 100 (Su un limite di sopportazione ~100)
+
+- Impatto della serata sui tratti psicologici degli agenti OCEAN:
+   -> Estroversione media INIZIALE: 0.4
+   -> Estroversione media FINALE:   0.62
+   -> Variazione netta:             +0.23
+
+=== RUN 4 ===
+=== STATISTICHE FINALI DELLA SERATA (1000 ticks) ===
+
+- N° agenti stati al bagno: 13 (Tempo medio per visita: 50 ticks)
+- N° agenti che hanno giocato: 22 (Tempo medio per giocata: 152.2 ticks)
+- N° agenti che hanno consumato almeno un drink: 15
+- N° agenti che hanno consumato almeno una birra: 14
+- Tempo medio di attesa in coda verso la cassa: 103 ticks
+
+- Volume totale vendite (Drink + Birre): 37 consumazioni
+
+=== DINAMICHE SOCIALI E PSICOLOGICHE ===
+- Dialoghi totali scaturiti: 13
+- Totale gruppi/amicizie formati: 2
+- Picco medio di stress per il traffico: 97 (Su un limite di sopportazione ~100)
+
+- Impatto della serata sui tratti psicologici degli agenti OCEAN:
+   -> Estroversione media INIZIALE: 0.49
+   -> Estroversione media FINALE:   0.6
+   -> Variazione netta:             +0.11
+
+=== RUN 5 ===
+=== STATISTICHE FINALI DELLA SERATA (1000 ticks) ===
+
+- N° agenti stati al bagno: 13 (Tempo medio per visita: 50 ticks)
+- N° agenti che hanno giocato: 22 (Tempo medio per giocata: 143.4 ticks)
+- N° agenti che hanno consumato almeno un drink: 15
+- N° agenti che hanno consumato almeno una birra: 13
+- Tempo medio di attesa in coda verso la cassa: 109.3 ticks
+
+- Volume totale vendite (Drink + Birre): 36 consumazioni
+
+=== DINAMICHE SOCIALI E PSICOLOGICHE ===
+- Dialoghi totali scaturiti: 11
+- Totale gruppi/amicizie formati: 1
+- Picco medio di stress per il traffico: 111.5 (Su un limite di sopportazione ~100)
+
+- Impatto della serata sui tratti psicologici degli agenti OCEAN:
+   -> Estroversione media INIZIALE: 0.45
+   -> Estroversione media FINALE:   0.64
+   -> Variazione netta:             +0.19
+
+=== RUN 6 ===
+=== STATISTICHE FINALI DELLA SERATA (1000 ticks) ===
+
+- N° agenti stati al bagno: 14 (Tempo medio per visita: 50 ticks)
+- N° agenti che hanno giocato: 16 (Tempo medio per giocata: 153.7 ticks)
+- N° agenti che hanno consumato almeno un drink: 16
+- N° agenti che hanno consumato almeno una birra: 10
+- Tempo medio di attesa in coda verso la cassa: 99.6 ticks
+
+- Volume totale vendite (Drink + Birre): 31 consumazioni
+
+=== DINAMICHE SOCIALI E PSICOLOGICHE ===
+- Dialoghi totali scaturiti: 24
+- Totale gruppi/amicizie formati: 6
+- Picco medio di stress per il traffico: 102.3 (Su un limite di sopportazione ~100)
+
+- Impatto della serata sui tratti psicologici degli agenti OCEAN:
+   -> Estroversione media INIZIALE: 0.56
+   -> Estroversione media FINALE:   0.7
+   -> Variazione netta:             +0.14
+
+=== RUN 7 ===
+=== STATISTICHE FINALI DELLA SERATA (1000 ticks) ===
+
+- N° agenti stati al bagno: 7 (Tempo medio per visita: 50 ticks)
+- N° agenti che hanno giocato: 24 (Tempo medio per giocata: 147.7 ticks)
+- N° agenti che hanno consumato almeno un drink: 12
+- N° agenti che hanno consumato almeno una birra: 12
+- Tempo medio di attesa in coda verso la cassa: 109.9 ticks
+
+- Volume totale vendite (Drink + Birre): 27 consumazioni
+
+=== DINAMICHE SOCIALI E PSICOLOGICHE ===
+- Dialoghi totali scaturiti: 17
+- Totale gruppi/amicizie formati: 3
+- Picco medio di stress per il traffico: 100.1 (Su un limite di sopportazione ~100)
+
+- Impatto della serata sui tratti psicologici degli agenti OCEAN:
+   -> Estroversione media INIZIALE: 0.51
+   -> Estroversione media FINALE:   0.62
+   -> Variazione netta:             +0.11
+
+=== RUN 8 ===
+=== STATISTICHE FINALI DELLA SERATA (1000 ticks) ===
+
+- N° agenti stati al bagno: 13 (Tempo medio per visita: 50 ticks)
+- N° agenti che hanno giocato: 22 (Tempo medio per giocata: 145.8 ticks)
+- N° agenti che hanno consumato almeno un drink: 18
+- N° agenti che hanno consumato almeno una birra: 13
+- Tempo medio di attesa in coda verso la cassa: 101.7 ticks
+
+- Volume totale vendite (Drink + Birre): 39 consumazioni
+
+=== DINAMICHE SOCIALI E PSICOLOGICHE ===
+- Dialoghi totali scaturiti: 20
+- Totale gruppi/amicizie formati: 7
+- Picco medio di stress per il traffico: 104.9 (Su un limite di sopportazione ~100)
+
+- Impatto della serata sui tratti psicologici degli agenti OCEAN:
+   -> Estroversione media INIZIALE: 0.36
+   -> Estroversione media FINALE:   0.54
+   -> Variazione netta:             +0.17
+
+=== RUN 9 ===
+=== STATISTICHE FINALI DELLA SERATA (1000 ticks) ===
+
+- N° agenti stati al bagno: 11 (Tempo medio per visita: 50 ticks)
+- N° agenti che hanno giocato: 26 (Tempo medio per giocata: 151.3 ticks)
+- N° agenti che hanno consumato almeno un drink: 14
+- N° agenti che hanno consumato almeno una birra: 12
+- Tempo medio di attesa in coda verso la cassa: 108.4 ticks
+
+- Volume totale vendite (Drink + Birre): 30 consumazioni
+
+=== DINAMICHE SOCIALI E PSICOLOGICHE ===
+- Dialoghi totali scaturiti: 21
+- Totale gruppi/amicizie formati: 6
+- Picco medio di stress per il traffico: 91.6 (Su un limite di sopportazione ~100)
+
+- Impatto della serata sui tratti psicologici degli agenti OCEAN:
+   -> Estroversione media INIZIALE: 0.66
+   -> Estroversione media FINALE:   0.73
+   -> Variazione netta:             +0.07
+
+=== RUN 10 ===
+=== STATISTICHE FINALI DELLA SERATA (1000 ticks) ===
+
+- N° agenti stati al bagno: 13 (Tempo medio per visita: 50 ticks)
+- N° agenti che hanno giocato: 20 (Tempo medio per giocata: 138.2 ticks)
+- N° agenti che hanno consumato almeno un drink: 16
+- N° agenti che hanno consumato almeno una birra: 11
+- Tempo medio di attesa in coda verso la cassa: 96.3 ticks
+
+- Volume totale vendite (Drink + Birre): 32 consumazioni
+
+=== DINAMICHE SOCIALI E PSICOLOGICHE ===
+- Dialoghi totali scaturiti: 20
+- Totale gruppi/amicizie formati: 6
+- Picco medio di stress per il traffico: 104.9 (Su un limite di sopportazione ~100)
+
+- Impatto della serata sui tratti psicologici degli agenti OCEAN:
+   -> Estroversione media INIZIALE: 0.5
+   -> Estroversione media FINALE:   0.6
+   -> Variazione netta:             +0.1

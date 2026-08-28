@@ -2,21 +2,20 @@
 <model version="NetLogo 7.0.3" snapToGrid="true">
   <code><![CDATA[extensions [py]
 
-; --- VARIABILI GLOBALI (Dell'intero locale) ---
+; -----------------------------------------------------
+; 1. VARIABILI GLOBALI
+; -----------------------------------------------------
 globals [
   totale-dialoghi
   totale-gruppi-formati
   media-estroversione-iniziale
 ]
 
-; -----------------------------------------------------
-; 1. GLOBALS
-; -----------------------------------------------------
 patches-own [
-  walkable?   ; Booleano (true/false) per i muri, i tavoli e il bancone
-  zona        ; Stringa per identificare il tipo di POI (es: "bagno", "cassa")
+  walkable?   ; Booleano (true/false) 
+  zona        ; Stringa per identificare il tipo di POI
   
-  ; Variabili per i "profumi"
+  ; Variabili per i "profumi" della discesa del gradiente per POI
   dist-cassa
   dist-drink
   dist-birra
@@ -148,7 +147,7 @@ to setup
   
   calcola-percorsi
   
-    ; Avvia l'ambiente Python 
+  ; Avvia l'ambiente Python 
   py:setup py:python 
 
   ; Definiamo entrambe le funzioni Python: genera_pensiero e chiedi_a_ollama
@@ -183,9 +182,9 @@ to setup
   )
 
   ; SPAWN TURTLES
-  ;; 1. CREAZIONE DEI XX AGENTI STANDARD
+  ; 1. Creazione dei 20 Agenti Standard
   create-turtles 20 [
-    set color cyan
+    set color cyan   ;; Colore ciano
     set shape "person" 
     set size 3
     set timer-attesa 0
@@ -194,7 +193,7 @@ to setup
     set frustrazione 0
     set memoria-relazionale []
     
-    set is-ocean? false ;; Agente standard
+    set is-ocean? false   ;; Profilo OCEAN disattivato
     
     move-to one-of patches with [zona = "entrata-uscita"]
     scegli-nuovo-obiettivo
@@ -211,9 +210,9 @@ to setup
     set picco-frustrazione 0
   ]
 
-  ;; 2. CREAZIONE DEI 10 AGENTI OCEAN
+  ; 2. Creazione dei 10 Agenti Intelligenti
   create-turtles 10 [
-    set color red  ;; Li coloriamo di rosso per riconoscerli
+    set color red  ;; Colore rosso
     set shape "person"
     set size 3
     set timer-attesa 0
@@ -223,10 +222,9 @@ to setup
     set memoria-relazionale []
     set timer-gruppo 0
     
-    set is-ocean? true ;; Agente intelligente
+    set is-ocean? true   ;; Profilo OCEAN attivato
     
     ;; Assegniamo valori psicologici casuali tra 0 e 1
-    ;; (In futuro potrai decidere di creare profili specifici, es. "il festaiolo")
     set trait-O random-float 1.0
     set trait-C random-float 1.0
     set trait-E random-float 1.0
@@ -250,10 +248,10 @@ to setup
     set picco-frustrazione 0
   ]
   
-  ; Calcola la media dell'estroversione degli agenti OCEAN prima che bevano!
+  ; Calcola la media dell'estroversione degli agenti OCEAN prima che la simulazione abbia inizio
   set media-estroversione-iniziale mean [trait-E] of turtles with [is-ocean? = true]
 
-  reset-ticks  ; Azzera il contatore del tempo (i "ticks")
+  reset-ticks   ;; Azzera il contatore del tempo
 end
 
 ; -----------------------------------------------------
@@ -261,6 +259,7 @@ end
 ; -----------------------------------------------------
 to go
   ask turtles [
+    
     ; --- TRACCIAMENTO ATTESA CASSA ---
     if stato = "verso-cassa" [
       set tot-attesa-cassa tot-attesa-cassa + 1
@@ -284,7 +283,7 @@ to go
         if stato-finito = "attesa-drink" or stato-finito = "attesa-birra" [
           set drink-consumati drink-consumati + 1
           
-          ; --- TRACCIAMENTO ---
+          ; Tracciamento
           if stato-finito = "attesa-drink" [ set drink-presi drink-presi + 1 ]
           if stato-finito = "attesa-birra" [ set birre-prese birre-prese + 1 ]
           
@@ -292,26 +291,28 @@ to go
           if is-ocean? = true [
             ; 1. Aumenta l'estroversione (+0.15)
             set trait-E trait-E + 0.15
-            if trait-E > 1.0 [ set trait-E 1.0 ] ; Mettiamo un tetto massimo
+            if trait-E > 1.0 [ set trait-E 1.0 ]   ;; Controllo
             
             ; 2. Diminuisce la coscienziosità (meno inibiti, -0.15)
             set trait-C trait-C - 0.15
-            if trait-C < 0.0 [ set trait-C 0.0 ] ; Mettiamo un pavimento minimo
+            if trait-C < 0.0 [ set trait-C 0.0 ]   ;; Controllo
             
             ; 3. Diminuisce il nevroticismo (più rilassati, -0.15)
             set trait-N trait-N - 0.15
-            if trait-N < 0.0 [ set trait-N 0.0 ]
+            if trait-N < 0.0 [ set trait-N 0.0 ]   ;; Controllo
             
             ; 4. Aggiungiamo l'ebbrezza ai ricordi!
             set memoria (word "Ho appena finito di bere e mi sento un po' brillo e sciolto. " memoria)
           ]
+          
           ; ---------------------------------------------------
           
+          ; --- EFFETTO DELL'ALCOL SULLA GESTIONE DEL BAGNO ---
           let va-in-bagno? false
           
-          if drink-consumati = 1 and random 100 < 50 [ set va-in-bagno? true ]
-          if drink-consumati = 2 and random 100 < 75 [ set va-in-bagno? true ]
-          if drink-consumati >= 3 [ set va-in-bagno? true ]
+          if drink-consumati = 1 and random 100 < 50 [ set va-in-bagno? true ]   ;; 50% al primo drink
+          if drink-consumati = 2 and random 100 < 75 [ set va-in-bagno? true ]   ;; 75% al secondo drink
+          if drink-consumati >= 3 [ set va-in-bagno? true ]   ;; 100% dal terzo drink in poi
           
           ifelse va-in-bagno? [ set stato "verso-bagno" set label stato rifletti "Ho bevuto troppo, devo scappare in bagno!" ]
                               [ scegli-nuovo-obiettivo ]
@@ -327,7 +328,6 @@ to go
         ]
       ]
       
-      ; MODIFICA: Ferma chi deve aspettare, MA fa camminare chi esplora o chi cerca amici!
       if timer-attesa > 0 and stato != "esplora" and stato != "cerca-amico" [ stop ]
     ]
 
@@ -335,12 +335,12 @@ to go
     ; 2. MOVIMENTO, INCONTRI E CODE
     ; -----------------------------------------------------
     
-    ; --- NOVITÀ: LOGICA DEL FOLLOWER (FLOCKING SMART E SEPARAZIONE) ---
+    ; --- LOGICA DEL FOLLOWER (FLOCKING E SEPARAZIONE) ---
     if amico-seguito != nobody [
       
       set timer-gruppo timer-gruppo + 1
       
-      ; 1. LOGICA DI SEPARAZIONE (Ci siamo persi o stufati!)
+      ; 1. LOGICA DI SEPARAZIONE
       if (timer-gruppo > 500 and random 100 < 5) or (distance amico-seguito > 15) [
         
         if distance amico-seguito > 15 and is-ocean? = true [
@@ -352,20 +352,20 @@ to go
         set timer-gruppo 0
         set label "libero"
         
-        ; SBLOCCO ZOMBIE: Obblighiamo l'ex-follower a trovarsi subito un nuovo obiettivo!
+        ; Obblighiamo l'ex-follower a trovarsi subito un nuovo obiettivo!
         scegli-nuovo-obiettivo 
       ]
       
-      ; 2. LOGICA DI INSEGUIMENTO (Anti-Deadlock)
+      ; 2. LOGICA DI INSEGUIMENTO
       if amico-seguito != nobody [
         set label "in gruppo"
         let stato-leader [stato] of amico-seguito
         
-        ; Se il leader si sta muovendo verso un obiettivo, COPIO il suo obiettivo e mi muovo con lui
+        ; Se il leader si sta muovendo verso un obiettivo, copio il suo obiettivo e mi muovo con lui
         ifelse member? stato-leader ["verso-cassa" "verso-drink" "verso-birra" "verso-bagno" "verso-giochi"] [
           let mio-vecchio-stato stato
           set stato stato-leader
-          muovi-verso-destinazione   ; Mi muovo in modo fluido verso la stessa meta
+          muovi-verso-destinazione   
           set stato mio-vecchio-stato
         ] [
           ; Se il leader sta esplorando a caso, faccio lo stesso per non intralciarlo
@@ -376,7 +376,7 @@ to go
               forward 1
             ]
           ] [
-            ; Se il leader è FERMO (es. sta ordinando da bere o è in bagno), mi avvicino e aspetto
+            ; Se il leader è fermo (es. sta ordinando da bere o è in bagno), mi avvicino e aspetto
             let target-patch [patch-here] of amico-seguito
             let vicini-liberi neighbors with [walkable? = true and not any? turtles-here]
             
@@ -396,7 +396,7 @@ to go
       ]
     ]
     
-    ; Esploratori e Cercatori di amici si muovono per il locale
+    ; "Esplora" e "Carca-Amico" si muovono per il locale
     if (stato = "esplora" or stato = "cerca-amico") and amico-seguito = nobody [
       right random 60 - 30
       let prossima-patch patch-ahead 1
@@ -454,7 +454,7 @@ to go
             let prof-amico [mio-profilo-esteso] of amico
             let mem-amico [memoria] of amico
             
-            ; -- Battuta 1 (Iniziatore) --
+            ; --- Battuta 1 ---
             py:set "profilo_py" prof-iniz
             let cont-1 (word "Incontri l'Agente " id-amico ". I tuoi ricordi: " mem-iniz ". ")
             ifelse ricordo-iniziatore != "" [
@@ -498,7 +498,7 @@ to go
           ]
           
           ; =====================================================
-          ; CASO 2: INTELLIGENTE vs STANDARD (3 fasi)
+          ; CASO 2: INTELLIGENTE vs STANDARD (3 battute)
           ; =====================================================
           if iniziatore-ocean? = true and amico-ocean? = false [
             let prof-iniz mio-profilo-esteso
@@ -531,7 +531,7 @@ to go
           ]
           
           ; =====================================================
-          ; CASO 3: STANDARD vs INTELLIGENTE (2 fasi)
+          ; CASO 3: STANDARD vs INTELLIGENTE (2 battute)
           ; =====================================================
           if iniziatore-ocean? = false and amico-ocean? = true [
             let risposte-stupide ["Ciao!" "Ehi! Come butta?" "Tutto bene?" "Che ressa stasera!" "Bella serata eh!"]
@@ -557,7 +557,7 @@ to go
           ]
           
           ; --- 2. SALVATAGGIO NELLA MEMORIA RELAZIONALE ---
-          ; Ognuno dei due salva in memoria l'ultima battuta dell'altro!
+          ; Ognuno dei due salva in memoria l'ultima battuta dell'altro
           if battuta-amico != "" [ aggiorna-ricordo id-amico battuta-amico ]
           if battuta-iniziatore != "" [ ask amico [ aggiorna-ricordo id-iniziatore battuta-iniziatore ] ]
           
@@ -590,7 +590,7 @@ to go
     ]
 
     
-    ; --- IL RESTO DEI MOVIMENTI PER LE CODE ---
+    ; --- MOVIMENTI PER LE CODE ---
     if stato = "verso-cassa" or stato = "verso-giochi" or stato = "verso-drink" or stato = "verso-birra" or stato = "verso-bagno" [
       
       muovi-verso-destinazione 
@@ -601,7 +601,7 @@ to go
       let sopportazione-max 120
       if is-ocean? = true [ set sopportazione-max 150 - (trait-N * 100) ]
       
-      ; Se sbotto e NON sono un follower sottomesso a un leader, rinuncio!
+      ; Se sbotto e non sono un follower sottomesso a un leader, rinuncio!
       if frustrazione > sopportazione-max and amico-seguito = nobody [
         set frustrazione 0
         set stato "esplora"
@@ -618,7 +618,7 @@ to go
         if not any? turtles with [stato = "acquisto-cassa"] [
           set stato "acquisto-cassa" set label stato set timer-attesa 15
           set frustrazione 0
-          set count-cassa count-cassa + 1  ;; TRACCIAMENTO
+          set count-cassa count-cassa + 1 
           rifletti "Sto ordinando e pagando alla cassa."
         ]
       ]
@@ -626,7 +626,7 @@ to go
       if stato = "verso-drink" and [dist-drink] of patch-here = 1 [
         if not any? turtles with [stato = "attesa-drink"] [
           set stato "attesa-drink" set label "attesa" set timer-attesa 40
-          set frustrazione 0  ;; <--- Sollievo!
+          set frustrazione 0   ;; Reset frustrazione
           rifletti "Sono al bancone, aspetto che il barista mi prepari il drink."
         ]
       ]
@@ -634,7 +634,7 @@ to go
       if stato = "verso-birra" and [dist-birra] of patch-here = 1 [
         if not any? turtles with [stato = "attesa-birra"] [
           set stato "attesa-birra" set label "attesa" set timer-attesa 30
-          set frustrazione 0  ;; <--- Sollievo!
+          set frustrazione 0   ;; Reset frustrazione
           rifletti "Aspetto il mio turno per farmi spillare la birra."
         ]
       ]
@@ -644,24 +644,24 @@ to go
           set stato "bagno" set label stato set timer-attesa 50
           set frustrazione 0
           move-to min-one-of (neighbors with [dist-bagno = 0]) [distance myself]
-          set count-bagno count-bagno + 1               ;; TRACCIAMENTO
-          set tot-tempo-bagno tot-tempo-bagno + 50      ;; TRACCIAMENTO
+          set count-bagno count-bagno + 1             
+          set tot-tempo-bagno tot-tempo-bagno + 50
           rifletti "Finalmente sono in bagno."
         ]
       ]
 
       if stato = "verso-giochi" and [dist-giochi] of patch-here = 1 [
         
-        ; 1. Usiamo un nome univoco per evitare conflitti con altre variabili
+        ; 1. Decidiamo la durata del gioco
         let durata-giocata 100 + random 100 
         
         ; 2. Impostiamo l'agente sullo stato di gioco
         set stato "gioca" 
         set label stato 
         set timer-attesa durata-giocata
-        set frustrazione 0  
+        set frustrazione 0   ;; Reset frustrazione
         
-        ; 3. TRACCIAMENTO STATISTICHE 
+        ; 3. Tracciamento 
         set count-giochi count-giochi + 1
         set tot-tempo-giochi tot-tempo-giochi + durata-giocata 
         
@@ -670,7 +670,7 @@ to go
       ]
     ]
     
-    ; --- FORZA IL NOME COME ETICHETTA PER GLI AGENTI OCEAN ---
+    ; Gli Agenti Intelligenti mostrano sempre l'ID come etichetta
       if is-ocean? = true [
         set label (word "Agente " who)
         set label-color black
@@ -680,6 +680,7 @@ to go
 
   tick
   
+  ; Esportazione
   if ticks = 1000 [
     esporta-statistiche
     print "Simulazione terminata (1000 ticks). Dati esportati con successo!"
@@ -688,16 +689,19 @@ to go
   
 end
 
+; -----------------------------------------------------
+; 4. PROCEDURE
+; -----------------------------------------------------
+
 to scegli-nuovo-obiettivo
-  ; Se sto seguendo qualcuno, il mio libero arbitrio si disattiva!
-  ; --- NOVITÀ: LOGICA DEL FOLLOWER (FLOCKING) ---
+  ; Se sto seguendo qualcuno, il libero arbitrio si disattiva
     if amico-seguito != nobody [
       
       ; Se sono a più di 1.5 passi dal mio leader, cerco di raggiungerlo
       if distance amico-seguito > 1.5 [
         let leader-patch [patch-here] of amico-seguito
         
-        ; Guardo i vicini liberi (no muri, no altre persone)
+        ; Guardo i neighbors liberi (no muri, no altre persone)
         let vicini-liberi neighbors with [walkable? = true and not any? turtles-here]
         
         if any? vicini-liberi [
@@ -710,8 +714,7 @@ to scegli-nuovo-obiettivo
             face patch-migliore
             move-to patch-migliore
           ] [
-            ; Se c'è un ostacolo e la linea retta è bloccata,
-            ; faccio un passo "a caso" sui vicini liberi per scivolare lungo il muro!
+            ; Se c'è un ostacolo e la linea retta è bloccata, faccio un passo "a caso" sui vicini liberi per scivolare
             let passo-laterale one-of vicini-liberi
             face passo-laterale
             move-to passo-laterale
@@ -720,10 +723,9 @@ to scegli-nuovo-obiettivo
       ]
     ]
   
+  ; --- COMPORTAMENTO PER AGENTI STANDARD ---
   ifelse is-ocean? = false [
-    ;; ----------------------------------------------------
-    ;; COMPORTAMENTO STANDARD (190 agenti)
-    ;; ----------------------------------------------------
+    
     let decisione random 100
     if decisione < 30 [ set stato "verso-cassa" set timer-attesa 0 ]
     if decisione >= 30 and decisione < 60 [ set stato "verso-giochi" set timer-attesa 0 ]
@@ -731,26 +733,23 @@ to scegli-nuovo-obiettivo
     if decisione >= 80 [ set stato "esplora" set timer-attesa 100 + random 150 ]
     
   ] [
-    ;; ----------------------------------------------------
-    ;; COMPORTAMENTO OCEAN (10 agenti)
-    ;; ----------------------------------------------------
-    ;; Calcoliamo il desiderio (peso) per ogni azione. Più è alto, più è probabile sceglierla.
+    ; --- COMPORTAMENTO PER AGENTI INTELLIGENTI (OCEAN) ---
     
+    ; Calcoliamo il desiderio (peso) per ogni azione. Più è alto, più è probabile sceglierla.
     let peso-cassa 20 + (trait-N * 20) + (trait-C * 10)
     let peso-giochi 10 + (trait-O * 30) + (trait-E * 10)
     let peso-cerca-amico 10 + (trait-E * 50) + (trait-A * 10)
     
-    ;; Il nevroticismo abbassa la voglia di esplorare senza meta
+    ; Il nevroticismo abbassa la voglia di esplorare senza meta
     let peso-esplora 10 + (trait-O * 40) - (trait-N * 20)
-    if peso-esplora < 5 [ set peso-esplora 5 ] ;; Evitiamo pesi negativi
+    if peso-esplora < 5 [ set peso-esplora 5 ]   ; Controllo
     
-    ;; Sommiamo tutti i pesi
     let totale-pesi (peso-cassa + peso-giochi + peso-cerca-amico + peso-esplora)
     
-    ;; Estraiamo un numero a caso sul totale (Roulette Wheel Selection)
+    ; Estraiamo un numero a caso sul totale (Roulette Wheel Selection)
     let dado random-float totale-pesi
     
-    ;; Decidiamo l'obiettivo in base all'estrazione
+    ; Si sceglie l'obiettivo in base all'estrazione
     if dado < peso-cassa [
       set stato "verso-cassa" 
       set timer-attesa 0
@@ -773,26 +772,20 @@ to scegli-nuovo-obiettivo
     ]
   ]
   
-  ;; Aggiorna la label visiva
   set label stato
   set label-color black
 end
 
+
 to muovi-verso-destinazione
   ; Cerca mattonelle libere da altre persone e ostacoli
-  ; let vicini-liberi neighbors with [walkable? = true and not any? turtles-here]  
   let vicini-liberi neighbors with [walkable? = true and not any? turtles-here and dist-bagno > 0]
-  
-  ; Impedisce a chi passa per caso di calpestare il bagno
-  ;if stato != "verso-bagno" and stato != "bagno" [
-  ;  set vicini-liberi vicini-liberi with [dist-bagno > 0]
-  ;]
 
   if any? vicini-liberi [
     let patch-migliore nobody
     let mia-distanza 9999
     
-    ; 1. Valuta la distanza attuale dall'obiettivo
+    ; 1. VALUTA LA DISTANZA ATTUALE DALL'OBIETTIVO
     if stato = "verso-cassa" [ set patch-migliore min-one-of vicini-liberi [dist-cassa] set mia-distanza dist-cassa ]
     if stato = "verso-drink" [ set patch-migliore min-one-of vicini-liberi [dist-drink] set mia-distanza dist-drink ]
     if stato = "verso-birra" [ set patch-migliore min-one-of vicini-liberi [dist-birra] set mia-distanza dist-birra ]
@@ -809,47 +802,47 @@ to muovi-verso-destinazione
 
       ; 2. LOGICA SCORRIMENTO TRAFFICO E CODE
       ifelse distanza-futura < mia-distanza [
-        ; Se la strada davanti è libera e mi avvicina, vado dritto deciso!
+        ; Se la strada davanti è libera e mi avvicina, vado dritto
         face patch-migliore
         move-to patch-migliore
         
         ; Se cammino, mi calmo un po'
         if frustrazione > 0 [ set frustrazione frustrazione - 1 ]
       ] [
-        ; L'ostacolo davanti mi blocca la strada.
-        ; --- AUMENTO LA FRUSTRAZIONE ---
+        ; Se ho un ostacolo davanti, mi innversosico
         set frustrazione frustrazione + 2 
         if frustrazione > picco-frustrazione [ set picco-frustrazione frustrazione ]
         
         ifelse mia-distanza <= 3 [
-          ; SONO IN CODA (vicino all'obiettivo)
+          ; Coda (vicino all'obiettivo)
           if random 100 < 5 [ face patch-migliore move-to patch-migliore ]
         ] [
-          ; STO CERCANDO DI USCIRE (lontano dall'obiettivo)
+          ; Sto cercando di uscire (lontano dall'obiettivo)
           if random 100 < 80 [ face patch-migliore move-to patch-migliore ]
         ]
       ]
       
       ifelse distanza-futura < mia-distanza [
-        ; Se la strada davanti è libera e mi avvicina, vado dritto deciso!
+        ; Se la strada davanti è libera e mi avvicina, vado dritto
         face patch-migliore
         move-to patch-migliore
       ] [
         ; L'ostacolo davanti mi blocca la strada ottimale. 
         ; Distinguiamo chi è IN CODA da chi sta CERCANDO DI USCIRE o CAMMINARE.
         ifelse mia-distanza <= 3 [
-          ; SONO IN CODA (vicino all'obiettivo): Sto fermo per non rompere la fila. 
+          ; Coda (vicino all'obiettivo): sto fermo per non rompere la fila. 
           ; Mi sposto solo rarissimamente (5% dei casi) per sbloccare micro-ingorghi.
           if random 100 < 5 [ face patch-migliore move-to patch-migliore ]
         ] [
-          ; STO CERCANDO DI USCIRE (lontano dall'obiettivo): 
-          ; Sgomito aggirando l'ostacolo lateralmente per liberare il passaggio (80% dei casi).
+          ; Sto cercando di uscire (lontano dall'obiettivo): 
+          ; Cerco di aggirare l'ostacolo lateralmente per liberare il passaggio (80% dei casi).
           if random 100 < 80 [ face patch-migliore move-to patch-migliore ]
         ]
       ]
     ]
   ]
 end
+
 
 to calcola-percorsi
   ; 1. Inizializza tutto con una distanza altissima (irraggiungibile)
@@ -884,20 +877,18 @@ to calcola-percorsi
   ]
 end
 
+
 to rifletti [ evento-attuale ]
   if is-ocean? = true [
     ; Usiamo il profilo esteso per far capire bene i tratti all'AI
     let mio-profilo mio-profilo-esteso 
     
-    ; --- Passaggio sicuro delle variabili ---
-    py:set "profilo_py" mio-profilo
-    
-    ; --- Passaggio sicuro delle variabili ---
+    ; Passaggio delle variabili 
     py:set "profilo_py" mio-profilo
     py:set "memoria_py" memoria
     py:set "evento_py" evento-attuale
     
-    ; Interroga Ollama senza incollare le stringhe
+    ; Interroga Ollama
     let pensiero py:runresult "genera_pensiero(profilo_py, memoria_py, evento_py)"
     
     ; Stampa nella console includendo i tratti OCEAN
@@ -905,15 +896,13 @@ to rifletti [ evento-attuale ]
     print (word "   -> Pensiero: " pensiero)
     print "--------------------------------------------------"
     
-    ; AGGIORNA LA MEMORIA: Aggiungiamo l'ultimo pensiero ai ricordi
+    ; Aggiorna la memoria aggiungendo l'ultimo pensiero ai ricordi
     set memoria (word "In precedenza: " evento-attuale ". Ho pensato: " pensiero)
     
-    ; Opzionale: mostra un riassunto sulla testa
     set label pensiero
   ]
 end
 
-; --- MEMORIA RELAZIONALE ---
 
 to-report ricordo-con [ id-amico ]
   ; Cerca se nella memoria esiste già una conversazione con questo specifico ID
@@ -924,23 +913,22 @@ to-report ricordo-con [ id-amico ]
 end
 
 to aggiorna-ricordo [ id-amico frase-da-ricordare ]
-  ; Cancella il vecchio ricordo di questo agente (per non intasare la memoria)
+  ; Cancella il vecchio ricordo di questo agente
   set memoria-relazionale filter [ x -> item 0 x != id-amico ] memoria-relazionale
-  ; Salva il nuovo ricordo sotto forma di lista: [ ID , "frase" ]
+  ; Salva il nuovo ricordo
   set memoria-relazionale lput (list id-amico frase-da-ricordare) memoria-relazionale
 end
 
-; --- TRADUTTORE PROFILO PER OLLAMA ---
+
 to-report mio-profilo-esteso
   report (word "Apertura mentale: " precision trait-O 1 ", Coscienziosità: " precision trait-C 1 ", Estroversione: " precision trait-E 1 ", Amicalità: " precision trait-A 1 ", Nevroticismo: " precision trait-N 1)
 end
 
-; -----------------------------------------------------
-; FUNZIONE PER ESPORTARE LE STATISTICHE
-; -----------------------------------------------------
+
 to esporta-statistiche
   ; Crea (o sovrascrive) un file di testo nella stessa cartella del modello
   file-open "statistiche_serata.txt"
+  file-print ""
   file-print "=== STATISTICHE FINALI DELLA SERATA (1000 ticks) ==="
   file-print ""
   
@@ -948,7 +936,7 @@ to esporta-statistiche
   let agenti-bagno count turtles with [count-bagno > 0]
   let tempo-medio-bagno 0
   if agenti-bagno > 0 [ 
-    ; Calcola la media dei tick passati al bagno per ogni agente che ci è andato
+    ; !!! TEST - Calcola la media dei tick passati al bagno per ogni agente che ci è andato !!!
     set tempo-medio-bagno mean [tot-tempo-bagno / count-bagno] of turtles with [count-bagno > 0] 
   ]
   file-print (word "- N° agenti stati al bagno: " agenti-bagno " (Tempo medio per visita: " precision tempo-medio-bagno 1 " ticks)")
@@ -976,8 +964,6 @@ to esporta-statistiche
     set tempo-medio-cassa (sum [tot-attesa-cassa] of turtles) / attese-totali-cassa 
   ]
   file-print (word "- Tempo medio di attesa in coda verso la cassa: " precision tempo-medio-cassa 1 " ticks")
-
-  ; ... (vecchio codice di esporta-statistiche) ...
 
   ; 5. VENDITE TOTALI
   let vendite-totali (sum [drink-presi] of turtles) + (sum [birre-prese] of turtles)
@@ -1008,9 +994,12 @@ to esporta-statistiche
   file-print (word "   -> Estroversione media FINALE:   " precision media-estroversione-finale 2)
   file-print (word "   -> Variazione netta:             " ifelse-value (delta-estroversione >= 0) [word "+" precision delta-estroversione 2] [precision delta-estroversione 2])
   
-  ; Chiude il file salvandolo in modo sicuro
   file-close
-end]]></code>
+end
+
+;; Mattia Bertolotti
+;; Matricola 866362
+;; Università degli Studi di Milano-Bicocca - A.A. 2025/2026]]></code>
   <widgets>
     <view x="368" wrappingAllowedX="true" y="10" frameRate="30.0" minPycor="0" height="516" showTickCounter="true" patchSize="4.0" fontSize="10" wrappingAllowedY="true" width="516" tickCounterLabel="ticks" maxPycor="127" updateMode="0" maxPxcor="127" minPxcor="0"></view>
     <button x="110" y="10" height="40" disableUntilTicks="false" forever="false" kind="Observer" width="100">setup</button>
